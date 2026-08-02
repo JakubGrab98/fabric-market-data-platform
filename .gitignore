@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+.mcp.json
+architecture.mermaid
+CLAUDE.md
