@@ -1,0 +1,15 @@
+# Ticker universe for batch ingestion notebooks.
+# stooq_symbol follows Stooq's convention: <ticker>.<market> (GPW = "wa").
+tickers:
+  - ticker: PKN
+    stooq_symbol: pkn.wa
+    company_name: "PKN Orlen"
+    currency: PLN
+  - ticker: PKO
+    stooq_symbol: pko.wa
+    company_name: "PKO Bank Polski"
+    currency: PLN
+  - ticker: CDR
+    stooq_symbol: cdr.wa
+    company_name: "CD Projekt"
+    currency: PLN
