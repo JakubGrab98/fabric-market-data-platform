@@ -219,3 +219,6 @@ __marimo__/
 .mcp.json
 architecture.mermaid
 CLAUDE.md
+
+# Local git worktrees (subagent-driven-development scratch workspaces)
+.worktrees/
