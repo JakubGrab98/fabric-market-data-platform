@@ -29,7 +29,10 @@ production), `requests`, `pyyaml`, `pytest`.
 - Formatting/linting: `ruff check .` and `black .` (line-length 100) must pass before each commit.
 - Conventional Commits prefix + short imperative summary (`feat:`, `test:`, `chore:`).
 - Atomic commits — one logical change per commit.
-- Current branch is `feature/repo-skeleton`; commit directly there unless told otherwise.
+- Work happens in the isolated worktree at
+  `.worktrees/phase1-fmp-gus` on branch `feature/phase1-fmp-gus-bronze-ingestion` (branched from
+  `feature/repo-skeleton`, which already has the NBP/Stooq notebooks this plan's pattern follows).
+  Commit directly there.
 
 ---
 
