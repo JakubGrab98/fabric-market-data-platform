@@ -1,15 +1,19 @@
 # Ticker universe for batch ingestion notebooks.
 # stooq_symbol follows Stooq's convention: <ticker>.<market> (GPW = "wa").
+# fmp_symbol follows FMP's convention: plain ticker, no market suffix, for GPW listings.
 tickers:
   - ticker: PKN
     stooq_symbol: pkn.wa
+    fmp_symbol: PKN
     company_name: "PKN Orlen"
     currency: PLN
   - ticker: PKO
     stooq_symbol: pko.wa
+    fmp_symbol: PKO
     company_name: "PKO Bank Polski"
     currency: PLN
   - ticker: CDR
     stooq_symbol: cdr.wa
+    fmp_symbol: CDR
     company_name: "CD Projekt"
     currency: PLN
