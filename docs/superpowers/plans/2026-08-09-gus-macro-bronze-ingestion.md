@@ -280,11 +280,15 @@ Using one of the real variable IDs found in Task 1:
 curl -s "https://bdl.stat.gov.pl/api/v1/data/by-variable/<real-id>?unit-level=0&year=2023&format=json" | python -m json.tool
 ```
 
-Confirm the top-level shape is `{"results": [...], ...}` where each result has a `values` list of
-`{"year": ..., "val": ..., ...}` entries — this is the shape Task 3's `parse_gus_data` assumes,
-based on BDL's documented API structure but not yet exercised against a live response in this
-environment. If the real shape differs (e.g. a different key for the numeric value, or no `unit`
-field per entry), adjust `parse_gus_data` in Task 3 accordingly before treating it as correct.
+**Confirmed real shape** (verified live against variable 217230, 2023):
+`{"totalRecords":1,"variableId":217230,"measureUnitId":1,"aggregateId":1,"lastUpdate":null,"results":[{"id":"000000000000","name":"POLSKA","values":[{"year":"2023","val":111.4,"attrId":1}]}]}`.
+Note two things Task 3 must account for that an earlier draft of this plan got wrong: (1) `year`
+comes back as a **string**, not an int — `int(entry["year"])` in Task 3's `parse_gus_data` already
+handles this correctly, no change needed there; (2) there is **no `unit` field inside each `values`
+entry** — the only unit information is the top-level `measureUnitId` (a numeric id, not a unit
+string). Task 3 has been updated accordingly: `parse_gus_data` takes `unit` as an explicit
+parameter (sourced from `notebooks/config/macro_indicators.yaml`'s own `unit` field, via the
+caller) instead of trying to read a nonexistent per-record `unit` key from the payload.
 
 - [ ] **Step 6: Commit**
 
@@ -303,10 +307,14 @@ git commit -m "feat: add GUS BDL data URL builder and fetch function"
 
 **Interfaces:**
 - Consumes: nothing from Tasks 1-2 directly (takes an already-fetched `payload: dict`).
-- Produces: `parse_gus_data(payload: dict, indicator_name: str, variable_id: int, source: str,
-  retrieved_at: datetime, spark: SparkSession) -> DataFrame` matching `BRONZE_MACRO_SCHEMA`
-  (`indicator_name: str`, `variable_id: int`, `year: int`, `value: float | None`, `unit: str |
-  None`, `source: str`, `retrieved_at: datetime`). Consumed by Task 4's `notebook.py`.
+- Produces: `parse_gus_data(payload: dict, indicator_name: str, variable_id: int, unit: str,
+  source: str, retrieved_at: datetime, spark: SparkSession) -> DataFrame` matching
+  `BRONZE_MACRO_SCHEMA` (`indicator_name: str`, `variable_id: int`, `year: int`, `value: float |
+  None`, `unit: str | None`, `source: str`, `retrieved_at: datetime`). `unit` is supplied by the
+  caller from the config entry (`notebooks/config/macro_indicators.yaml`'s own `unit` field) — the
+  live BDL API response has no per-record unit string to read (confirmed in Task 2 Step 5), only a
+  numeric `measureUnitId` at the payload's top level that this notebook doesn't attempt to
+  resolve. Consumed by Task 4's `notebook.py`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -321,15 +329,21 @@ from pyspark.sql import SparkSession
 from notebooks.bronze.gus.transforms import parse_gus_data
 
 SAMPLE_PAYLOAD = {
+    "totalRecords": 1,
+    "variableId": 12345,
+    "measureUnitId": 1,
+    "aggregateId": 1,
+    "lastUpdate": None,
     "results": [
         {
             "id": "000000000000",
+            "name": "POLSKA",
             "values": [
-                {"year": 2023, "val": 3.5, "unit": "%"},
-                {"year": 2024, "val": 4.2, "unit": "%"},
+                {"year": "2023", "val": 3.5, "attrId": 1},
+                {"year": "2024", "val": 4.2, "attrId": 1},
             ],
         }
-    ]
+    ],
 }
 
 
@@ -344,7 +358,7 @@ def spark() -> SparkSession:
 def test_parse_gus_data_maps_rows_and_stamps_provenance(spark):
     retrieved_at = datetime(2024, 6, 1, tzinfo=timezone.utc)
 
-    df = parse_gus_data(SAMPLE_PAYLOAD, "cpi", 12345, "gus", retrieved_at, spark)
+    df = parse_gus_data(SAMPLE_PAYLOAD, "cpi", 12345, "%", "gus", retrieved_at, spark)
     rows = df.orderBy("year").collect()
 
     assert len(rows) == 2
@@ -360,15 +374,21 @@ def test_parse_gus_data_maps_rows_and_stamps_provenance(spark):
 
 def test_parse_gus_data_handles_null_value(spark):
     payload = {
-        "results": [{"id": "x", "values": [{"year": 2023, "val": None, "unit": "%"}]}]
+        "results": [{"id": "x", "name": "POLSKA", "values": [{"year": "2023", "val": None, "attrId": 1}]}]
     }
     retrieved_at = datetime(2024, 6, 1, tzinfo=timezone.utc)
 
-    df = parse_gus_data(payload, "cpi", 12345, "gus", retrieved_at, spark)
+    df = parse_gus_data(payload, "cpi", 12345, "%", "gus", retrieved_at, spark)
     row = df.collect()[0]
 
     assert row.value is None
 ```
+
+Note the sample payload above is now shaped exactly like the real, live-verified response from Task
+2 Step 5 (`totalRecords`, `variableId`, `measureUnitId`, `aggregateId`, `lastUpdate`, and each
+`values` entry has `year` as a **string** plus `attrId`, not a `unit` key) — this replaces an
+earlier draft of this plan that guessed at the shape before it had been checked against a live
+call.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -409,22 +429,26 @@ def parse_gus_data(
     payload: dict,
     indicator_name: str,
     variable_id: int,
+    unit: str,
     source: str,
     retrieved_at: datetime,
     spark: SparkSession,
 ) -> DataFrame:
     """Parse one BDL by-variable payload into the Bronze macro schema.
 
-    Response shape (results[].values[].{year,val,unit}) is this project's
-    best-effort read of the BDL API docs — verify it against a live call
-    (Task 2 Step 5 of the implementation plan) before trusting it silently,
-    same posture as the Stooq CSV-header caveat in ../stooq/transforms.py.
+    Response shape (results[].values[].{year,val,attrId}) is confirmed
+    against a live call (Task 2 Step 5 of the implementation plan): the API
+    has no per-record unit string, only a numeric measureUnitId at the
+    payload's top level, which this function doesn't attempt to resolve —
+    `unit` is supplied by the caller from config instead.
 
     Args:
         payload: JSON payload from fetch_gus_data (not None).
         indicator_name: Config-level indicator name to stamp on every row
             (e.g. "cpi").
         variable_id: BDL variable id to stamp on every row.
+        unit: Unit label from the indicator's config entry (e.g. "%"),
+            stamped on every row — not read from the API response.
         source: Source name to stamp on every row (e.g. "gus").
         retrieved_at: Retrieval timestamp to stamp on every row.
         spark: Active SparkSession.
@@ -443,7 +467,7 @@ def parse_gus_data(
                     variable_id,
                     int(entry["year"]),
                     float(value) if value is not None else None,
-                    entry.get("unit"),
+                    unit,
                     source,
                     retrieved_at_utc,
                 )
@@ -562,7 +586,15 @@ for entry in indicators:
         if payload is None:
             continue
         frames.append(
-            parse_gus_data(payload, entry["name"], entry["gus_variable_id"], source, retrieved_at, spark)
+            parse_gus_data(
+                payload,
+                entry["name"],
+                entry["gus_variable_id"],
+                entry["unit"],
+                source,
+                retrieved_at,
+                spark,
+            )
         )
 
 bronze_df = frames[0]
