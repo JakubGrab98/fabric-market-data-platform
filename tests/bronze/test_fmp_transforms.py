@@ -1,7 +1,12 @@
 import pytest
 from pyspark.sql import SparkSession
 
-from notebooks.bronze.fmp.transforms import load_ticker_config
+from notebooks.bronze.fmp.transforms import (
+    build_balance_sheet_url,
+    build_cash_flow_url,
+    build_income_statement_url,
+    load_ticker_config,
+)
 
 
 @pytest.fixture(scope="module")
@@ -35,3 +40,30 @@ def test_load_ticker_config(tmp_path):
             "currency": "PLN",
         }
     ]
+
+
+def test_build_balance_sheet_url():
+    url = build_balance_sheet_url("PKN", 8, "test-key")
+    assert (
+        url
+        == "https://financialmodelingprep.com/stable/balance-sheet-statement"
+        "?symbol=PKN&period=quarter&limit=8&apikey=test-key"
+    )
+
+
+def test_build_income_statement_url():
+    url = build_income_statement_url("PKN", 8, "test-key")
+    assert (
+        url
+        == "https://financialmodelingprep.com/stable/income-statement"
+        "?symbol=PKN&period=quarter&limit=8&apikey=test-key"
+    )
+
+
+def test_build_cash_flow_url():
+    url = build_cash_flow_url("PKN", 8, "test-key")
+    assert (
+        url
+        == "https://financialmodelingprep.com/stable/cashflow-statement"
+        "?symbol=PKN&period=quarter&limit=8&apikey=test-key"
+    )
