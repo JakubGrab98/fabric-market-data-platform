@@ -1,4 +1,31 @@
-from notebooks.bronze.gus.transforms import build_gus_data_url, load_macro_indicator_config
+from datetime import datetime, timezone
+
+import pytest
+from pyspark.sql import SparkSession
+
+from notebooks.bronze.gus.transforms import (
+    build_gus_data_url,
+    load_macro_indicator_config,
+    parse_gus_data,
+)
+
+SAMPLE_PAYLOAD = {
+    "totalRecords": 1,
+    "variableId": 12345,
+    "measureUnitId": 1,
+    "aggregateId": 1,
+    "lastUpdate": None,
+    "results": [
+        {
+            "id": "000000000000",
+            "name": "POLSKA",
+            "values": [
+                {"year": "2023", "val": 3.5, "attrId": 1},
+                {"year": "2024", "val": 4.2, "attrId": 1},
+            ],
+        }
+    ],
+}
 
 
 def test_load_macro_indicator_config(tmp_path):
@@ -24,3 +51,42 @@ def test_build_gus_data_url_defaults_to_national_level():
 def test_build_gus_data_url_custom_unit_level():
     url = build_gus_data_url(12345, 2024, unit_level="2")
     assert "unit-level=2" in url
+
+
+@pytest.fixture(scope="module")
+def spark() -> SparkSession:
+    session = SparkSession.builder.master("local[1]").appName("tests").getOrCreate()
+    session.conf.set("spark.sql.session.timeZone", "UTC")
+    yield session
+    session.stop()
+
+
+def test_parse_gus_data_maps_rows_and_stamps_provenance(spark):
+    retrieved_at = datetime(2024, 6, 1, tzinfo=timezone.utc)
+
+    df = parse_gus_data(SAMPLE_PAYLOAD, "cpi", 12345, "%", "gus", retrieved_at, spark)
+    rows = df.orderBy("year").collect()
+
+    assert len(rows) == 2
+    first = rows[0]
+    assert first.indicator_name == "cpi"
+    assert first.variable_id == 12345
+    assert first.year == 2023
+    assert first.value == 3.5
+    assert first.unit == "%"
+    assert first.source == "gus"
+    assert first.retrieved_at == retrieved_at.replace(tzinfo=None)
+
+
+def test_parse_gus_data_handles_null_value(spark):
+    payload = {
+        "results": [
+            {"id": "x", "name": "POLSKA", "values": [{"year": "2023", "val": None, "attrId": 1}]}
+        ]
+    }
+    retrieved_at = datetime(2024, 6, 1, tzinfo=timezone.utc)
+
+    df = parse_gus_data(payload, "cpi", 12345, "%", "gus", retrieved_at, spark)
+    row = df.collect()[0]
+
+    assert row.value is None
