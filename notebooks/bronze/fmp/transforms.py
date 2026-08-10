@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 import yaml
-from pyspark.sql import DataFrame, Row, SparkSession
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.functions import lit
 
 FMP_BASE_URL = "https://financialmodelingprep.com/stable"
 
@@ -65,10 +67,17 @@ def fetch_fmp_statement(url: str, timeout: int = 30) -> list[dict]:
     Returns:
         List of period records (empty list if FMP has no data for the symbol).
     Raises:
-        FmpFetchError: on any non-2xx response or an unexpected (non-list) body.
+        FmpFetchError: on any non-2xx response, an unexpected (non-list) body,
+            or a transport-level failure (connection error, timeout, etc.) —
+            in all cases the API key is redacted from the raised message.
     """
-    response = requests.get(url, timeout=timeout)
     redacted_url = _redact_api_key_from_url(url)
+    try:
+        response = requests.get(url, timeout=timeout)
+    except requests.RequestException as exc:
+        raise FmpFetchError(
+            f"FMP request failed for url={redacted_url}: {type(exc).__name__}"
+        ) from None
     if not response.ok:
         raise FmpFetchError(
             f"FMP request failed with {response.status_code} for url={redacted_url}: {response.text}"
@@ -96,6 +105,14 @@ def parse_fmp_statement(
     since FMP's field set differs across statement types and can change
     between API revisions.
 
+    Records are serialized to JSON and parsed via spark.read.json rather
+    than spark.createDataFrame(rows) — Spark's JSON schema inference
+    handles two payload shapes that createDataFrame(list[Row]) cannot:
+    a field that is None in every record (createDataFrame can't determine
+    a type for an all-null column), and a field whose values are a mix of
+    int and float across records (createDataFrame raises CANNOT_MERGE_TYPE;
+    the JSON reader widens to double).
+
     Args:
         records: List of period dicts from fetch_fmp_statement (non-empty).
         ticker: Internal ticker symbol (not the FMP symbol) for this data.
@@ -121,12 +138,21 @@ def parse_fmp_statement(
                 seen.add(key)
                 all_keys.append(key)
 
-    rows = []
-    for record in records:
-        merged = {key: record.get(key) for key in all_keys}
-        merged["ticker"] = ticker
-        merged["source"] = source
-        merged["retrieved_at"] = retrieved_at_utc
-        rows.append(Row(**merged))
+    row_dicts = [{key: record.get(key) for key in all_keys} for record in records]
 
-    return spark.createDataFrame(rows)
+    json_lines = [json.dumps(row_dict) for row_dict in row_dicts]
+    rdd = spark.sparkContext.parallelize(json_lines)
+    df = spark.read.json(rdd)
+
+    # ticker/source/retrieved_at are stamped as literal columns (rather than
+    # baked into the JSON payload) so the provenance timestamp round-trips
+    # through Spark's native python-datetime <-> Timestamp conversion —
+    # the same conversion createDataFrame(rows) used previously — instead
+    # of a string round-trip through the JSON reader's timestamp parsing,
+    # which is keyed off spark.sql.session.timeZone on the way in but the
+    # JVM's local timezone on the way out via collect().
+    return (
+        df.withColumn("ticker", lit(ticker))
+        .withColumn("source", lit(source))
+        .withColumn("retrieved_at", lit(retrieved_at_utc))
+    )
