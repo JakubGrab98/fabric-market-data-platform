@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 import pytest
 from pyspark.sql import SparkSession
 
