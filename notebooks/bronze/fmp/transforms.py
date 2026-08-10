@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 import yaml
+from pyspark.sql import DataFrame, Row, SparkSession
 
 FMP_BASE_URL = "https://financialmodelingprep.com/stable"
 
@@ -77,3 +79,54 @@ def fetch_fmp_statement(url: str, timeout: int = 30) -> list[dict]:
             f"Expected a list response from FMP, got {type(payload)} for url={redacted_url}"
         )
     return payload
+
+
+def parse_fmp_statement(
+    records: list[dict],
+    ticker: str,
+    source: str,
+    retrieved_at: datetime,
+    spark: SparkSession,
+) -> DataFrame:
+    """Parse a raw FMP statement payload into a Bronze DataFrame.
+
+    Keeps every field FMP returns (Bronze is 1:1 with source) and stamps
+    ticker/source/retrieved_at provenance columns on every row. Schema is
+    inferred from the payload's field union rather than a fixed StructType,
+    since FMP's field set differs across statement types and can change
+    between API revisions.
+
+    Args:
+        records: List of period dicts from fetch_fmp_statement (non-empty).
+        ticker: Internal ticker symbol (not the FMP symbol) for this data.
+        source: Source name to stamp on every row (e.g. "fmp").
+        retrieved_at: Retrieval timestamp to stamp on every row.
+        spark: Active SparkSession.
+    Returns:
+        DataFrame with FMP's fields (union across records) plus
+        ticker/source/retrieved_at columns.
+    Raises:
+        ValueError: if records is empty (nothing to infer a schema from).
+    """
+    if not records:
+        raise ValueError("records must be non-empty to build a DataFrame")
+
+    retrieved_at_utc = retrieved_at.astimezone(timezone.utc).replace(tzinfo=None)
+
+    all_keys: list[str] = []
+    seen: set[str] = set()
+    for record in records:
+        for key in record:
+            if key not in seen:
+                seen.add(key)
+                all_keys.append(key)
+
+    rows = []
+    for record in records:
+        merged = {key: record.get(key) for key in all_keys}
+        merged["ticker"] = ticker
+        merged["source"] = source
+        merged["retrieved_at"] = retrieved_at_utc
+        rows.append(Row(**merged))
+
+    return spark.createDataFrame(rows)
