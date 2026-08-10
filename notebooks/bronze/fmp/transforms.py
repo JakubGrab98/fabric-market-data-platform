@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import requests
@@ -12,6 +13,11 @@ FMP_BASE_URL = "https://financialmodelingprep.com/stable"
 
 class FmpFetchError(RuntimeError):
     """Raised when the FMP API returns an unexpected error response."""
+
+
+def _redact_api_key_from_url(url: str) -> str:
+    """Redact the API key from an FMP URL to prevent leaking credentials in error messages."""
+    return re.sub(r"apikey=[^&]*", "apikey=***", url)
 
 
 def load_ticker_config(path: str | Path) -> list[dict]:
@@ -60,13 +66,14 @@ def fetch_fmp_statement(url: str, timeout: int = 30) -> list[dict]:
         FmpFetchError: on any non-2xx response or an unexpected (non-list) body.
     """
     response = requests.get(url, timeout=timeout)
+    redacted_url = _redact_api_key_from_url(url)
     if not response.ok:
         raise FmpFetchError(
-            f"FMP request failed with {response.status_code} for url={url}: {response.text}"
+            f"FMP request failed with {response.status_code} for url={redacted_url}: {response.text}"
         )
     payload = response.json()
     if not isinstance(payload, list):
         raise FmpFetchError(
-            f"Expected a list response from FMP, got {type(payload)} for url={url}"
+            f"Expected a list response from FMP, got {type(payload)} for url={redacted_url}"
         )
     return payload

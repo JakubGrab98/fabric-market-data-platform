@@ -45,8 +45,7 @@ def test_load_ticker_config(tmp_path):
 def test_build_balance_sheet_url():
     url = build_balance_sheet_url("PKN", 8, "test-key")
     assert (
-        url
-        == "https://financialmodelingprep.com/stable/balance-sheet-statement"
+        url == "https://financialmodelingprep.com/stable/balance-sheet-statement"
         "?symbol=PKN&period=quarter&limit=8&apikey=test-key"
     )
 
@@ -54,8 +53,7 @@ def test_build_balance_sheet_url():
 def test_build_income_statement_url():
     url = build_income_statement_url("PKN", 8, "test-key")
     assert (
-        url
-        == "https://financialmodelingprep.com/stable/income-statement"
+        url == "https://financialmodelingprep.com/stable/income-statement"
         "?symbol=PKN&period=quarter&limit=8&apikey=test-key"
     )
 
@@ -63,7 +61,6 @@ def test_build_income_statement_url():
 def test_build_cash_flow_url():
     url = build_cash_flow_url("PKN", 8, "test-key")
     assert (
-        url
-        == "https://financialmodelingprep.com/stable/cashflow-statement"
+        url == "https://financialmodelingprep.com/stable/cashflow-statement"
         "?symbol=PKN&period=quarter&limit=8&apikey=test-key"
     )
