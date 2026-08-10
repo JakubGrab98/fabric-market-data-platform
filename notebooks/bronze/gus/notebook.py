@@ -89,6 +89,11 @@ for entry in indicators:
             )
         )
 
+if not frames:
+    raise RuntimeError(
+        f"No GUS data returned for any indicator in {start_year}-{end_year} (unit_level={unit_level})"
+    )
+
 bronze_df = frames[0]
 for frame in frames[1:]:
     bronze_df = bronze_df.unionByName(frame)
