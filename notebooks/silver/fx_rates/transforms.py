@@ -29,6 +29,11 @@ def standardize_fx_rates(deduped_df: DataFrame) -> DataFrame:
     Args:
         deduped_df: Deduplicated DataFrame matching bronze_nbp_fx_rates' schema.
     Returns:
-        DataFrame with effective_date as DateType; all other columns unchanged.
+        DataFrame with effective_date as DateType; all other columns unchanged. Rows whose
+        effective_date string fails to parse (to_date returns null) are dropped — a row with
+        no valid date has no valid Silver identity and would otherwise silently duplicate on
+        every MERGE INTO re-run (null-to-null never matches in SQL).
     """
-    return deduped_df.withColumn("effective_date", to_date(col("effective_date"), "yyyy-MM-dd"))
+    return deduped_df.withColumn(
+        "effective_date", to_date(col("effective_date"), "yyyy-MM-dd")
+    ).filter(col("effective_date").isNotNull())

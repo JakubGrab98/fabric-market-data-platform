@@ -109,6 +109,41 @@ def test_standardize_prices_casts_date(spark):
     assert standardized.schema["date"].dataType.typeName() == "date"
 
 
+def test_standardize_prices_drops_rows_with_unparseable_date(spark):
+    rows = [
+        Row(
+            ticker="PKN",
+            date="not-a-date",
+            open=60.0,
+            high=61.0,
+            low=59.5,
+            close=60.5,
+            volume=100000,
+            source="stooq",
+            retrieved_at=datetime(2024, 1, 3, 8, 0, 0),  # noqa: DTZ001
+        ),
+        Row(
+            ticker="PKO",
+            date="2024-01-02",
+            open=40.0,
+            high=40.5,
+            low=39.5,
+            close=40.2,
+            volume=50000,
+            source="stooq",
+            retrieved_at=datetime(2024, 1, 3, 8, 0, 0),  # noqa: DTZ001
+        ),
+    ]
+    df = spark.createDataFrame(rows)
+
+    standardized = standardize_prices(df)
+    rows_out = standardized.collect()
+
+    assert len(rows_out) == 1
+    assert rows_out[0].ticker == "PKO"
+    assert rows_out[0].date == date(2024, 1, 2)
+
+
 def test_load_ticker_config(tmp_path):
     config_file = tmp_path / "tickers.yaml"
     config_file.write_text(

@@ -30,9 +30,14 @@ def standardize_prices(deduped_df: DataFrame) -> DataFrame:
     Args:
         deduped_df: Deduplicated DataFrame matching bronze_stooq_prices' schema.
     Returns:
-        DataFrame with date as DateType; all other columns unchanged.
+        DataFrame with date as DateType; all other columns unchanged. Rows whose date string
+        fails to parse (to_date returns null) are dropped — a row with no valid date has no
+        valid Silver identity and would otherwise silently duplicate on every MERGE INTO
+        re-run (null-to-null never matches in SQL).
     """
-    return deduped_df.withColumn("date", to_date(col("date"), "yyyy-MM-dd"))
+    return deduped_df.withColumn("date", to_date(col("date"), "yyyy-MM-dd")).filter(
+        col("date").isNotNull()
+    )
 
 
 def load_ticker_config(path: str | Path) -> list[dict]:
