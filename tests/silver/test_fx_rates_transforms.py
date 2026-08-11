@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import date, datetime
 
 import pytest
 from pyspark.sql import Row, SparkSession
 
-from notebooks.silver.fx_rates.transforms import deduplicate_fx_rates
+from notebooks.silver.fx_rates.transforms import deduplicate_fx_rates, standardize_fx_rates
 
 
 @pytest.fixture(scope="module")
@@ -63,3 +63,22 @@ def test_deduplicate_fx_rates_single_row_per_key_unaffected(spark):
     deduped = deduplicate_fx_rates(bronze_df)
 
     assert deduped.count() == 1
+
+
+def test_standardize_fx_rates_casts_effective_date(spark):
+    rows = [
+        Row(
+            currency_code="USD",
+            effective_date="2024-01-02",
+            mid_rate=3.9432,
+            source="nbp",
+            retrieved_at=datetime(2024, 1, 3, 8, 0, 0),  # noqa: DTZ001
+        ),
+    ]
+    df = spark.createDataFrame(rows)
+
+    standardized = standardize_fx_rates(df)
+    row = standardized.collect()[0]
+
+    assert row.effective_date == date(2024, 1, 2)
+    assert standardized.schema["effective_date"].dataType.typeName() == "date"

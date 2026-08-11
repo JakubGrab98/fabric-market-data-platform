@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pyspark.sql import DataFrame, Window
-from pyspark.sql.functions import col, row_number
+from pyspark.sql.functions import col, row_number, to_date
 
 
 def deduplicate_fx_rates(bronze_df: DataFrame) -> DataFrame:
@@ -21,3 +21,14 @@ def deduplicate_fx_rates(bronze_df: DataFrame) -> DataFrame:
     return (
         bronze_df.withColumn("_rn", row_number().over(window)).filter(col("_rn") == 1).drop("_rn")
     )
+
+
+def standardize_fx_rates(deduped_df: DataFrame) -> DataFrame:
+    """Cast effective_date from a yyyy-MM-dd string to a proper date type.
+
+    Args:
+        deduped_df: Deduplicated DataFrame matching bronze_nbp_fx_rates' schema.
+    Returns:
+        DataFrame with effective_date as DateType; all other columns unchanged.
+    """
+    return deduped_df.withColumn("effective_date", to_date(col("effective_date"), "yyyy-MM-dd"))
