@@ -3,7 +3,12 @@ from datetime import date, datetime
 import pytest
 from pyspark.sql import Row, SparkSession
 
-from notebooks.silver.prices.transforms import deduplicate_prices, standardize_prices
+from notebooks.silver.prices.transforms import (
+    add_currency_column,
+    deduplicate_prices,
+    load_ticker_config,
+    standardize_prices,
+)
 
 
 @pytest.fixture(scope="module")
@@ -102,3 +107,57 @@ def test_standardize_prices_casts_date(spark):
 
     assert row.date == date(2024, 1, 2)
     assert standardized.schema["date"].dataType.typeName() == "date"
+
+
+def test_load_ticker_config(tmp_path):
+    config_file = tmp_path / "tickers.yaml"
+    config_file.write_text(
+        "tickers:\n"
+        "  - ticker: PKN\n"
+        "    stooq_symbol: pkn.wa\n"
+        "    fmp_symbol: PKN\n"
+        "    company_name: PKN Orlen\n"
+        "    currency: PLN\n",
+        encoding="utf-8",
+    )
+
+    tickers = load_ticker_config(config_file)
+
+    assert tickers == [
+        {
+            "ticker": "PKN",
+            "stooq_symbol": "pkn.wa",
+            "fmp_symbol": "PKN",
+            "company_name": "PKN Orlen",
+            "currency": "PLN",
+        }
+    ]
+
+
+def test_add_currency_column_joins_by_ticker(spark):
+    prices_rows = [
+        Row(ticker="PKN", date=date(2024, 1, 2), close=60.5),
+        Row(ticker="PKO", date=date(2024, 1, 2), close=40.2),
+    ]
+    prices_df = spark.createDataFrame(prices_rows)
+    tickers = [
+        {"ticker": "PKN", "currency": "PLN"},
+        {"ticker": "PKO", "currency": "PLN"},
+    ]
+
+    result = add_currency_column(prices_df, tickers, spark)
+    rows = {r.ticker: r.currency for r in result.collect()}
+
+    assert rows == {"PKN": "PLN", "PKO": "PLN"}
+
+
+def test_add_currency_column_leaves_unknown_ticker_null(spark):
+    prices_rows = [Row(ticker="XYZ", date=date(2024, 1, 2), close=1.0)]
+    prices_df = spark.createDataFrame(prices_rows)
+    tickers = [{"ticker": "PKN", "currency": "PLN"}]
+
+    result = add_currency_column(prices_df, tickers, spark)
+    row = result.collect()[0]
+
+    assert row.ticker == "XYZ"
+    assert row.currency is None

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from pyspark.sql import DataFrame, Window
+from pathlib import Path
+
+import yaml
+from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql.functions import col, row_number, to_date
 
 
@@ -30,3 +33,37 @@ def standardize_prices(deduped_df: DataFrame) -> DataFrame:
         DataFrame with date as DateType; all other columns unchanged.
     """
     return deduped_df.withColumn("date", to_date(col("date"), "yyyy-MM-dd"))
+
+
+def load_ticker_config(path: str | Path) -> list[dict]:
+    """Load the ticker list used to look up each ticker's trading currency.
+
+    Args:
+        path: Path to a YAML file shaped like notebooks/config/tickers.yaml.
+    Returns:
+        List of ticker config dicts (ticker, stooq_symbol, fmp_symbol, company_name, currency).
+    """
+    with open(path, encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    return config["tickers"]
+
+
+def add_currency_column(
+    prices_df: DataFrame, tickers: list[dict], spark: SparkSession
+) -> DataFrame:
+    """Join each price row to its ticker's trading currency from config.
+
+    No FX conversion is performed — currency is a passthrough label. A ticker missing from
+    the config yields a null currency rather than dropping the row.
+
+    Args:
+        prices_df: DataFrame with at least a ticker column.
+        tickers: Ticker config dicts from load_ticker_config (must have ticker, currency keys).
+        spark: Active SparkSession, used to build the small lookup DataFrame.
+    Returns:
+        prices_df with a currency column added.
+    """
+    currency_lookup = spark.createDataFrame(
+        [(t["ticker"], t["currency"]) for t in tickers], ["ticker", "currency"]
+    )
+    return prices_df.join(currency_lookup, on="ticker", how="left")
