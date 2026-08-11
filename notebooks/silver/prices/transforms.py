@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pyspark.sql import DataFrame, Window
-from pyspark.sql.functions import col, row_number
+from pyspark.sql.functions import col, row_number, to_date
 
 
 def deduplicate_prices(bronze_df: DataFrame) -> DataFrame:
@@ -19,3 +19,14 @@ def deduplicate_prices(bronze_df: DataFrame) -> DataFrame:
     return (
         bronze_df.withColumn("_rn", row_number().over(window)).filter(col("_rn") == 1).drop("_rn")
     )
+
+
+def standardize_prices(deduped_df: DataFrame) -> DataFrame:
+    """Cast date from a yyyy-MM-dd string to a proper date type.
+
+    Args:
+        deduped_df: Deduplicated DataFrame matching bronze_stooq_prices' schema.
+    Returns:
+        DataFrame with date as DateType; all other columns unchanged.
+    """
+    return deduped_df.withColumn("date", to_date(col("date"), "yyyy-MM-dd"))

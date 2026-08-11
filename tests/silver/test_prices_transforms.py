@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import date, datetime
 
 import pytest
 from pyspark.sql import Row, SparkSession
 
-from notebooks.silver.prices.transforms import deduplicate_prices
+from notebooks.silver.prices.transforms import deduplicate_prices, standardize_prices
 
 
 @pytest.fixture(scope="module")
@@ -79,3 +79,26 @@ def test_deduplicate_prices_single_row_per_key_unaffected(spark):
     deduped = deduplicate_prices(bronze_df)
 
     assert deduped.count() == 1
+
+
+def test_standardize_prices_casts_date(spark):
+    rows = [
+        Row(
+            ticker="PKN",
+            date="2024-01-02",
+            open=60.0,
+            high=61.0,
+            low=59.5,
+            close=60.5,
+            volume=100000,
+            source="stooq",
+            retrieved_at=datetime(2024, 1, 3, 8, 0, 0),  # noqa: DTZ001
+        ),
+    ]
+    df = spark.createDataFrame(rows)
+
+    standardized = standardize_prices(df)
+    row = standardized.collect()[0]
+
+    assert row.date == date(2024, 1, 2)
+    assert standardized.schema["date"].dataType.typeName() == "date"
