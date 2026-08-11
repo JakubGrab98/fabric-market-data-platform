@@ -1,7 +1,6 @@
 from datetime import date, datetime, timezone
 
 import pytest
-from pyspark.sql import SparkSession
 
 from notebooks.bronze.stooq.transforms import (
     StooqFetchError,
@@ -11,14 +10,6 @@ from notebooks.bronze.stooq.transforms import (
 )
 
 SAMPLE_CSV = "Date,Open,High,Low,Close,Volume\n2024-01-02,60.0,61.5,59.8,61.0,120000\n2024-01-03,61.0,61.2,60.1,60.5,98000\n"
-
-
-@pytest.fixture(scope="module")
-def spark() -> SparkSession:
-    session = SparkSession.builder.master("local[1]").appName("tests").getOrCreate()
-    session.conf.set("spark.sql.session.timeZone", "UTC")
-    yield session
-    session.stop()
 
 
 def test_build_stooq_csv_url():

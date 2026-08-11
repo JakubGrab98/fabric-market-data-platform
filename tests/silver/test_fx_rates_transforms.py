@@ -1,17 +1,8 @@
 from datetime import date, datetime
 
-import pytest
-from pyspark.sql import Row, SparkSession
+from pyspark.sql import Row
 
 from notebooks.silver.fx_rates.transforms import deduplicate_fx_rates, standardize_fx_rates
-
-
-@pytest.fixture(scope="module")
-def spark() -> SparkSession:
-    session = SparkSession.builder.master("local[1]").appName("tests").getOrCreate()
-    session.conf.set("spark.sql.session.timeZone", "UTC")
-    yield session
-    session.stop()
 
 
 def test_deduplicate_fx_rates_keeps_latest_retrieved_at(spark):

@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 import pytest
 import requests
-from pyspark.sql import SparkSession
 
 from notebooks.bronze.fmp.transforms import (
     FmpFetchError,
@@ -14,14 +13,6 @@ from notebooks.bronze.fmp.transforms import (
     load_ticker_config,
     parse_fmp_statement,
 )
-
-
-@pytest.fixture(scope="module")
-def spark() -> SparkSession:
-    session = SparkSession.builder.master("local[1]").appName("tests").getOrCreate()
-    session.conf.set("spark.sql.session.timeZone", "UTC")
-    yield session
-    session.stop()
 
 
 def test_load_ticker_config(tmp_path):

@@ -1,7 +1,6 @@
 from datetime import date, datetime
 
-import pytest
-from pyspark.sql import Row, SparkSession
+from pyspark.sql import Row
 
 from notebooks.silver.prices.transforms import (
     add_currency_column,
@@ -9,14 +8,6 @@ from notebooks.silver.prices.transforms import (
     load_ticker_config,
     standardize_prices,
 )
-
-
-@pytest.fixture(scope="module")
-def spark() -> SparkSession:
-    session = SparkSession.builder.master("local[1]").appName("tests").getOrCreate()
-    session.conf.set("spark.sql.session.timeZone", "UTC")
-    yield session
-    session.stop()
 
 
 def test_deduplicate_prices_keeps_latest_retrieved_at(spark):
