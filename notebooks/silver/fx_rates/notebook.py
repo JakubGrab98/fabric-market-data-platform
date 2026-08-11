@@ -31,7 +31,7 @@ from transforms import deduplicate_fx_rates, standardize_fx_rates
 # META {
 # META   "language": "python",
 # META   "language_group": "synapse_pyspark"
-# }
+# META }
 
 # CELL ********************
 
@@ -44,7 +44,7 @@ silver_table_name: str = "silver_fx_rates"
 # META {
 # META   "language": "python",
 # META   "language_group": "synapse_pyspark"
-# }
+# META }
 
 # CELL ********************
 
@@ -74,4 +74,4 @@ else:
 # META {
 # META   "language": "python",
 # META   "language_group": "synapse_pyspark"
-# }
+# META }
