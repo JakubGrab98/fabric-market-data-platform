@@ -1,0 +1,36 @@
+# Ticker universe for batch ingestion notebooks.
+# stooq_symbol follows Stooq's convention: <ticker>.<market> (GPW = "wa").
+#
+# fmp_symbol is UNVERIFIED. No FMP API key was available anywhere in this
+# project's development, so the bare PKN/PKO/CDR values below are an
+# assumption, not a confirmed fact: they assume FMP indexes GPW listings by
+# plain ticker with no market suffix. FMP's documented convention for
+# non-US exchanges is actually to append an exchange suffix (e.g. "PKN.WA"
+# for Warsaw), so these values may well be wrong. Risk: a wrong-suffix
+# symbol doesn't fail loudly — it can silently resolve to a *different*
+# company (or a delisted/unrelated ticker on another exchange) and pull
+# that company's fundamentals in under the "PKN" label.
+#
+# Before trusting this in production, whoever has a real FMP API key MUST
+# verify each symbol, e.g.:
+#   https://financialmodelingprep.com/stable/search-symbol?query=PKN&apikey=<key>
+#   https://financialmodelingprep.com/stable/search-symbol?query=PKO&apikey=<key>
+#   https://financialmodelingprep.com/stable/search-symbol?query=CDR&apikey=<key>
+# and confirm the returned exchange/symbol actually matches PKN Orlen / PKO
+# Bank Polski / CD Projekt on GPW before relying on these values.
+tickers:
+  - ticker: PKN
+    stooq_symbol: pkn.wa
+    fmp_symbol: PKN
+    company_name: "PKN Orlen"
+    currency: PLN
+  - ticker: PKO
+    stooq_symbol: pko.wa
+    fmp_symbol: PKO
+    company_name: "PKO Bank Polski"
+    currency: PLN
+  - ticker: CDR
+    stooq_symbol: cdr.wa
+    fmp_symbol: CDR
+    company_name: "CD Projekt"
+    currency: PLN

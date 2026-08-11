@@ -1,0 +1,40 @@
+# Macro indicators for GUS BDL ingestion (Poland, national level only).
+# gus_variable_id values were looked up via GET /variables/search,
+# /subjects/search and /variables?subject-id= on the BDL API
+# (https://bdl.stat.gov.pl/api/v1) and each was sanity-checked with
+# GET /data/by-variable/<id>?unit-level=0&year=<Y> to confirm it actually
+# returns a national ("POLSKA") row — see Task 1 of the implementation plan
+# (docs/superpowers/plans/2026-08-09-gus-macro-bronze-ingestion.md) and
+# task-1-report.md for the exact commands and full reasoning.
+#
+# - cpi (id 217230, subject P2955 "Wskaźnik cen towarów i usług
+#   konsumpcyjnych ... COICOP 1999, dane do 2025r.", variable "ogółem"):
+#   annual headline CPI, expressed as "poprzedni rok = 100" (previous
+#   year = 100) index, e.g. 114.4 for 2022 (~14.4% inflation), 99.1 for
+#   2015 (deflation) — both match published GUS figures. Years available:
+#   2003-2025. measureUnitName reported by the API is "-" (dimensionless
+#   index), so unit is set to "-" rather than "%".
+# - unemployment_rate (id 60270, subject P2392 "Stopa bezrobocia
+#   rejestrowanego", variable "ogółem"): annual registered unemployment
+#   rate, national total (not broken out by sex/age/voivodeship). Years
+#   available: 2004-2025, unit "%". Verified 5.5% for 2023, 9.7% for 2015,
+#   12.4% for 2010 — consistent with published GUS figures.
+# - gdp (id 458271, subject P3498 "Produkt krajowy brutto ogółem"):
+#   annual nominal GDP, current prices, national total (not per-capita).
+#   Years available: 2000-2024, unit "mln zł" (million PLN). Verified
+#   1,809,564 for 2015 and 3,100,850 for 2022 — consistent with published
+#   GUS/nominal-GDP figures (~PLN 1.81tn and ~PLN 3.10tn respectively).
+#   Subject metadata reports availability at level 3 (voivodeship) only,
+#   but /data/by-variable?unit-level=0 aggregates voivodeship rows up to
+#   a national "POLSKA" total (aggregateId 1 in the response), which is
+#   what was verified above.
+indicators:
+  - name: cpi
+    gus_variable_id: 217230
+    unit: "-"
+  - name: unemployment_rate
+    gus_variable_id: 60270
+    unit: "%"
+  - name: gdp
+    gus_variable_id: 458271
+    unit: "mln zł"

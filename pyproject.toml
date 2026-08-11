@@ -1,0 +1,27 @@
+[project]
+name = "fabric-market-data-platform"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "requests",
+    "pyyaml",
+    "pyspark",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "black",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100
+# `spark` is injected as a global by the Fabric/Synapse notebook runtime.
+builtins = ["spark"]

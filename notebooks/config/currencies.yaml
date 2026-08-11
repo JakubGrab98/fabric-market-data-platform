@@ -1,0 +1,7 @@
+# Currency universe for NBP FX ingestion. Table A = average (mid) rates,
+# published once per business day by the Polish National Bank.
+currencies:
+  - code: USD
+    name: "dolar amerykański"
+  - code: EUR
+    name: "euro"
