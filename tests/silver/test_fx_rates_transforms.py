@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
 import pytest
 from pyspark.sql import Row, SparkSession
@@ -21,21 +21,21 @@ def test_deduplicate_fx_rates_keeps_latest_retrieved_at(spark):
             effective_date="2024-01-02",
             mid_rate=3.9432,
             source="nbp",
-            retrieved_at=datetime(2024, 1, 3, 8, 0, 0, tzinfo=timezone.utc),
+            retrieved_at=datetime(2024, 1, 3, 8, 0, 0),  # noqa: DTZ001
         ),
         Row(
             currency_code="USD",
             effective_date="2024-01-02",
             mid_rate=3.9500,
             source="nbp",
-            retrieved_at=datetime(2024, 1, 5, 8, 0, 0, tzinfo=timezone.utc),
+            retrieved_at=datetime(2024, 1, 5, 8, 0, 0),  # noqa: DTZ001
         ),
         Row(
             currency_code="EUR",
             effective_date="2024-01-02",
             mid_rate=4.3,
             source="nbp",
-            retrieved_at=datetime(2024, 1, 3, 8, 0, 0, tzinfo=timezone.utc),
+            retrieved_at=datetime(2024, 1, 3, 8, 0, 0),  # noqa: DTZ001
         ),
     ]
     bronze_df = spark.createDataFrame(rows)
@@ -55,7 +55,7 @@ def test_deduplicate_fx_rates_single_row_per_key_unaffected(spark):
             effective_date="2024-01-02",
             mid_rate=3.9432,
             source="nbp",
-            retrieved_at=datetime(2024, 1, 3, 8, 0, 0, tzinfo=timezone.utc),
+            retrieved_at=datetime(2024, 1, 3, 8, 0, 0),  # noqa: DTZ001
         ),
     ]
     bronze_df = spark.createDataFrame(rows)
