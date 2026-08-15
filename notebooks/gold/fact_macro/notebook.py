@@ -13,18 +13,18 @@
 
 # MARKDOWN ********************
 
-# ## Gold — fact_ceny
+# ## Gold — fact_macro
 #
-# Selects silver_prices into fact_ceny's canonical column order — Silver is already at the
-# right grain (ticker, date) and shape, so this makes the Gold contract explicit. Idempotent —
-# upserts via MERGE INTO, safe to re-run.
+# Selects silver_macro into fact_macro's canonical column order, dropping Silver's variable_id
+# (lineage-only, not part of the Gold contract). Idempotent — upserts via MERGE INTO, safe to
+# re-run.
 #
 # Logic lives in `transforms.py` next to this notebook; this cell stays thin.
 
 # CELL ********************
 
 from delta.tables import DeltaTable
-from transforms import build_fact_ceny
+from transforms import build_fact_macro
 
 # METADATA ********************
 
@@ -36,8 +36,8 @@ from transforms import build_fact_ceny
 # CELL ********************
 
 # PARAMETERS CELL — override via Data Factory pipeline / notebook run parameters.
-silver_table_name: str = "silver_prices"
-gold_table_name: str = "fact_ceny"
+silver_table_name: str = "silver_macro"
+gold_table_name: str = "fact_macro"
 
 # METADATA ********************
 
@@ -49,7 +49,7 @@ gold_table_name: str = "fact_ceny"
 # CELL ********************
 
 silver_df = spark.read.table(silver_table_name)
-gold_df = build_fact_ceny(silver_df)
+gold_df = build_fact_macro(silver_df)
 
 if spark.catalog.tableExists(gold_table_name):
     delta_table = DeltaTable.forName(spark, gold_table_name)
@@ -57,7 +57,9 @@ if spark.catalog.tableExists(gold_table_name):
         delta_table.alias("target")
         .merge(
             gold_df.alias("source"),
-            "target.ticker = source.ticker AND target.date = source.date",
+            "target.country = source.country "
+            "AND target.indicator_name = source.indicator_name "
+            "AND target.reference_date = source.reference_date",
         )
         .whenMatchedUpdateAll()
         .whenNotMatchedInsertAll()

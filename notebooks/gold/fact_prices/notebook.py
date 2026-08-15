@@ -13,18 +13,18 @@
 
 # MARKDOWN ********************
 
-# ## Gold — dim_spolka
+# ## Gold — fact_prices
 #
-# Builds dim_spolka directly from `notebooks/config/tickers.yaml` — static reference data, not
-# something ingested through Bronze/Silver. One row per ticker. Idempotent — upserts via MERGE
-# INTO, safe to re-run.
+# Selects silver_prices into fact_prices' canonical column order — Silver is already at the
+# right grain (ticker, date) and shape, so this makes the Gold contract explicit. Idempotent —
+# upserts via MERGE INTO, safe to re-run.
 #
 # Logic lives in `transforms.py` next to this notebook; this cell stays thin.
 
 # CELL ********************
 
 from delta.tables import DeltaTable
-from transforms import build_dim_spolka, load_ticker_config
+from transforms import build_fact_prices
 
 # METADATA ********************
 
@@ -36,8 +36,8 @@ from transforms import build_dim_spolka, load_ticker_config
 # CELL ********************
 
 # PARAMETERS CELL — override via Data Factory pipeline / notebook run parameters.
-ticker_config_path: str = "notebooks/config/tickers.yaml"
-gold_table_name: str = "dim_spolka"
+silver_table_name: str = "silver_prices"
+gold_table_name: str = "fact_prices"
 
 # METADATA ********************
 
@@ -48,14 +48,17 @@ gold_table_name: str = "dim_spolka"
 
 # CELL ********************
 
-tickers = load_ticker_config(ticker_config_path)
-gold_df = build_dim_spolka(tickers, spark)
+silver_df = spark.read.table(silver_table_name)
+gold_df = build_fact_prices(silver_df)
 
 if spark.catalog.tableExists(gold_table_name):
     delta_table = DeltaTable.forName(spark, gold_table_name)
     (
         delta_table.alias("target")
-        .merge(gold_df.alias("source"), "target.ticker = source.ticker")
+        .merge(
+            gold_df.alias("source"),
+            "target.ticker = source.ticker AND target.date = source.date",
+        )
         .whenMatchedUpdateAll()
         .whenNotMatchedInsertAll()
         .execute()

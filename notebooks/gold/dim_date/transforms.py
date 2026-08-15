@@ -1,4 +1,4 @@
-"""Transform functions for the Gold dim_data build notebook."""
+"""Transform functions for the Gold dim_date build notebook."""
 
 from __future__ import annotations
 

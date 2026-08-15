@@ -13,18 +13,20 @@
 
 # MARKDOWN ********************
 
-# ## Gold — fact_fundamenty
+# ## Gold — dim_date
 #
-# Selects silver_fundamentals into fact_fundamenty's canonical column order — Silver is already
-# at the right long/EAV grain (ticker, period_end_date, statement_type, metric_name), see
-# docs/data-model.md. Idempotent — upserts via MERGE INTO, safe to re-run.
+# Generates a standard calendar dimension over [start_date, end_date] — one row per date, not
+# ingested from Bronze/Silver. is_trading_day_gpw is currently a weekday-only approximation (see
+# transforms.py docstring). Idempotent — upserts via MERGE INTO, safe to re-run.
 #
 # Logic lives in `transforms.py` next to this notebook; this cell stays thin.
 
 # CELL ********************
 
+from datetime import date
+
 from delta.tables import DeltaTable
-from transforms import build_fact_fundamenty
+from transforms import generate_date_dimension
 
 # METADATA ********************
 
@@ -36,8 +38,9 @@ from transforms import build_fact_fundamenty
 # CELL ********************
 
 # PARAMETERS CELL — override via Data Factory pipeline / notebook run parameters.
-silver_table_name: str = "silver_fundamentals"
-gold_table_name: str = "fact_fundamenty"
+start_date: str = "2000-01-01"
+end_date: str = "2035-12-31"
+gold_table_name: str = "dim_date"
 
 # METADATA ********************
 
@@ -48,20 +51,15 @@ gold_table_name: str = "fact_fundamenty"
 
 # CELL ********************
 
-silver_df = spark.read.table(silver_table_name)
-gold_df = build_fact_fundamenty(silver_df)
+gold_df = generate_date_dimension(
+    date.fromisoformat(start_date), date.fromisoformat(end_date), spark
+)
 
 if spark.catalog.tableExists(gold_table_name):
     delta_table = DeltaTable.forName(spark, gold_table_name)
     (
         delta_table.alias("target")
-        .merge(
-            gold_df.alias("source"),
-            "target.ticker = source.ticker "
-            "AND target.period_end_date = source.period_end_date "
-            "AND target.statement_type = source.statement_type "
-            "AND target.metric_name = source.metric_name",
-        )
+        .merge(gold_df.alias("source"), "target.date = source.date")
         .whenMatchedUpdateAll()
         .whenNotMatchedInsertAll()
         .execute()

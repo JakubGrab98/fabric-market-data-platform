@@ -2,10 +2,10 @@ from datetime import datetime
 
 from pyspark.sql import Row
 
-from notebooks.gold.fact_ceny.transforms import FACT_CENY_COLUMNS, build_fact_ceny
+from notebooks.gold.fact_prices.transforms import FACT_PRICES_COLUMNS, build_fact_prices
 
 
-def test_build_fact_ceny_selects_canonical_columns(spark):
+def test_build_fact_prices_selects_canonical_columns(spark):
     rows = [
         Row(
             ticker="PKN",
@@ -22,9 +22,9 @@ def test_build_fact_ceny_selects_canonical_columns(spark):
     ]
     silver_df = spark.createDataFrame(rows)
 
-    fact_df = build_fact_ceny(silver_df)
+    fact_df = build_fact_prices(silver_df)
 
-    assert fact_df.columns == FACT_CENY_COLUMNS
+    assert fact_df.columns == FACT_PRICES_COLUMNS
     row = fact_df.collect()[0]
     assert row.ticker == "PKN"
     assert row.close == 61.0
