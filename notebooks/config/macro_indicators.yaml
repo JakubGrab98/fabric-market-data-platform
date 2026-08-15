@@ -17,7 +17,7 @@
 # - unemployment_rate (id 60270, subject P2392 "Stopa bezrobocia
 #   rejestrowanego", variable "ogółem"): annual registered unemployment
 #   rate, national total (not broken out by sex/age/voivodeship). Years
-#   available: 2004-2025, unit "%". Verified 5.5% for 2023, 9.7% for 2015,
+#   available: 2004-2025, unit "%". Verified 5.1% for 2023, 9.7% for 2015,
 #   12.4% for 2010 — consistent with published GUS figures.
 # - gdp (id 458271, subject P3498 "Produkt krajowy brutto ogółem"):
 #   annual nominal GDP, current prices, national total (not per-capita).

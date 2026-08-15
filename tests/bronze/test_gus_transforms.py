@@ -1,8 +1,5 @@
 from datetime import datetime, timezone
 
-import pytest
-from pyspark.sql import SparkSession
-
 from notebooks.bronze.gus.transforms import (
     build_gus_data_url,
     load_macro_indicator_config,
@@ -51,14 +48,6 @@ def test_build_gus_data_url_defaults_to_national_level():
 def test_build_gus_data_url_custom_unit_level():
     url = build_gus_data_url(12345, 2024, unit_level="2")
     assert "unit-level=2" in url
-
-
-@pytest.fixture(scope="module")
-def spark() -> SparkSession:
-    session = SparkSession.builder.master("local[1]").appName("tests").getOrCreate()
-    session.conf.set("spark.sql.session.timeZone", "UTC")
-    yield session
-    session.stop()
 
 
 def test_parse_gus_data_maps_rows_and_stamps_provenance(spark):

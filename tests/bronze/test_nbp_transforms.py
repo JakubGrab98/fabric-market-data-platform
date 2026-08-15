@@ -1,8 +1,5 @@
 from datetime import date, datetime, timezone
 
-import pytest
-from pyspark.sql import SparkSession
-
 from notebooks.bronze.nbp.transforms import (
     build_nbp_rates_url,
     chunk_date_range,
@@ -19,14 +16,6 @@ SAMPLE_PAYLOAD = {
         {"no": "002/A/NBP/2024", "effectiveDate": "2024-01-03", "mid": 3.9909},
     ],
 }
-
-
-@pytest.fixture(scope="module")
-def spark() -> SparkSession:
-    session = SparkSession.builder.master("local[1]").appName("tests").getOrCreate()
-    session.conf.set("spark.sql.session.timeZone", "UTC")
-    yield session
-    session.stop()
 
 
 def test_build_nbp_rates_url():
