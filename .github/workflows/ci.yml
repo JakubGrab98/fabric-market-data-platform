@@ -26,7 +26,7 @@ jobs:
       # Keep this list in sync with pyproject.toml's [project.dependencies]
       # and [project.optional-dependencies.dev].
       - name: Install dependencies
-        run: pip install requests pyyaml pyspark pytest ruff black
+        run: pip install requests pyyaml "pyspark~=3.5" pytest ruff black
 
       - name: Lint (ruff)
         run: ruff check .
