@@ -5,7 +5,7 @@ Claude Code) can pick up without re-deriving context from git log. Update this f
 the same commit/session that changes the state it describes; delete a line once it's resolved
 rather than leaving it stale.
 
-## Immediate — before the Phase 1 sources are trusted in production
+## Immediate — before the Bronze/Silver FMP path is trusted in production
 
 - **`fmp_symbol` in `notebooks/config/tickers.yaml` is still unverified.** No FMP API key was
   available in any session so far. Before the FMP notebook runs for real, verify each of
@@ -13,62 +13,59 @@ rather than leaving it stale.
   and update the yaml (currently flagged "UNVERIFIED" in its own comment — see there for the
   exact risk: a wrong exchange suffix could silently pull a different company's data under the
   right ticker label).
-- **FMP's inferred-schema design is unproven against a real response.** The `stable/` endpoint
-  paths, the `limit` parameter's semantics, and the whole field-union/`spark.read.json` approach
-  in `notebooks/bronze/fmp/transforms.py` were built against documentation, not a live call (same
-  reason as the point above — no key). One `curl` against a real ticker with a real key would
-  validate or invalidate all of it at once.
+- **FMP's inferred-schema design is unproven against a real response** — both in Bronze
+  (`spark.read.json` field-union approach in `notebooks/bronze/fmp/transforms.py`) and now in
+  Silver (`FMP_ENVELOPE_COLUMNS` in `notebooks/silver/fundamentals/transforms.py`, which assumes
+  `date`/`symbol`/`reportedCurrency`/`cik`/`filingDate`/`acceptedDate`/`fiscalYear`/`period` as
+  FMP's envelope fields — documented, not verified). One `curl` against a real ticker with a real
+  key would validate or invalidate both at once. See `docs/source-log.md`'s FMP entry.
 
-## Phase 1 follow-ups (deliberately deferred, not blocking)
+## Phase 3 follow-ups (deliberately deferred, not blocking)
 
-- **Eurostat** was explicitly scoped out of the GUS work — "GUS/Eurostat" in the roadmap is two
-  different APIs with different data shapes. Revisit only if EU-wide comparison data is actually
-  needed for an analysis; if so it's a new Bronze notebook, not an extension of `notebooks/bronze/gus/`.
-- **`docs/source-log.md`, `docs/data-model.md`, `docs/adr/`** are referenced by `docs/README.md`
-  but don't exist yet. Every Bronze source added so far (NBP, Stooq, FMP, GUS) has been ad hoc
-  about this — worth doing once, covering all four sources, rather than piecemeal per source.
+- **`dim_data.is_trading_day_gpw` is a weekday-only approximation** (Mon-Fri via Spark's
+  `dayofweek()`) — it does not exclude Polish public holidays yet. `docs/data-model.md` and
+  `docs/superpowers/specs/2026-08-15-phase3-gold-star-schema-design.md` both recommend a
+  maintained holiday library (e.g. the `holidays` PyPI package, `country="PL"`) for the real
+  formula rather than a hand-maintained date list, but that's a new dependency this project
+  hasn't added — evaluate and add it deliberately, not as a side effect of an unrelated change.
+- **Power BI semantic model / first report** (Phase 3's other roadmap item) hasn't been started —
+  the Gold notebooks exist, but nothing has been connected to Power BI Direct Lake yet.
+- **No Gold notebook has run against real Bronze/Silver data** (nothing has run against a real
+  Fabric workspace at all yet — see `docs/source-log.md`). Unit tests cover the transform logic;
+  an actual end-to-end run through Fabric is still open.
+
+## Standing, cross-phase follow-ups
+
+- **Fabric cross-folder notebook import behavior is still unconfirmed.** Every `notebook.py` uses
+  a flat `from transforms import ...` (sibling-local import); whether a *shared* module (e.g.
+  `notebooks/silver/common.py`) would resolve the same way inside Fabric's actual runtime has
+  never been tested. This blocks extracting the now five-way-duplicated `load_*_config` helpers
+  and the near-identical Silver dedup-by-natural-key pattern. See ADR 0005
+  (`docs/adr/0005-deliberate-duplication-pending-fabric-import-spike.md`) — spike this before
+  adding a sixth copy of either pattern.
 - **GUS BDL rate limiting isn't handled.** Fine today (3 indicators × ~10 years ≈ 3-4 dozen
   requests/run, anonymous limit is 100/15min), but `start_year` is a run parameter — widening it
   significantly could approach the limit. No backoff/retry logic exists in `fetch_gus_data`.
-- **Four-way duplication across `notebooks/bronze/{nbp,stooq,fmp,gus}/transforms.py`:**
-  - Each module hand-rolls its own `load_*_config` (same three-line YAML read). Low risk, but a
-    fourth copy is where it stopped being obviously fine.
-  - Each module's test file has a byte-identical module-scoped `spark` fixture. This one's a
-    clean, no-downside extraction — a shared `tests/conftest.py` should replace all four.
-  - The UTC-normalization line (`retrieved_at.astimezone(timezone.utc).replace(tzinfo=None)`) is
-    duplicated four times; only two of the four copies (nbp, stooq) still carry the comment
-    explaining *why* (a Spark timezone quirk) — fmp/gus lost it, so the line now reads as
-    unexplained boilerplate in half the codebase. Either copy the comment over or hoist the whole
-    normalization into a shared helper.
-  - Before extracting a shared `notebooks/common.py` for the transforms-level duplication (as
-    opposed to the test-level one, which is safe): spike whether Fabric's notebook runtime can
-    actually import a sibling-of-siblings module, since each `notebook.py` currently does
-    `from transforms import ...` (flat, not packaged) — this may not resolve the same way across
-    notebook folders inside Fabric.
 - **The API-key redaction pattern (`_redact_api_key_from_url` in `notebooks/bronze/fmp/transforms.py`)
   is FMP-local and hardcoded to the `apikey=` query param name.** `CLAUDE.md` lists Finnhub
   (streaming, token-authenticated) as an upcoming source — it'll need the same kind of redaction
   with a different param name (`token=`). Worth promoting to a shared, parameterized helper when
   that second consumer actually shows up; not worth doing speculatively now.
-- **Cosmetic:** `notebooks/config/macro_indicators.yaml`'s provenance comment says "Verified 5.5%
-  for 2023" for `unemployment_rate` — the actual verified value (and the one in the committed
-  `unit`/id) is 5.1%. Doesn't affect the real config value, but a future reader cross-checking the
-  comment will hit a discrepancy. One-line fix, take it opportunistically.
+- **Stooq's CSV header assumption is still unverified live** (`docs/source-log.md` — blocked by
+  Stooq's anti-bot JS challenge in every dev environment tried so far). Confirm from an actual
+  Fabric run, which may have a different network path.
+- **No CI** (`.github/workflows` or equivalent) runs `pytest`/`ruff`/`black` automatically —
+  currently a manual step before every PR.
 
 ## Bigger picture
 
-- **Phase 2 (Silver transformation) is the natural next phase** per `README_EN.md`'s roadmap —
-  cleaning/standardizing the now-four Bronze sources (NBP, Stooq, FMP, GUS). Consider starting
-  with just NBP + Stooq (the two sources that existed before this session, with the smallest
-  surface) to validate the Bronze→Silver pipeline shape before extending it to FMP/GUS.
-- **All four Bronze sources are append-only and defer deduplication to Silver, which doesn't
-  exist yet.** That's four sources' worth of unbounded duplicate accumulation riding on one
-  unwritten layer — worth being deliberate about Silver's dedup strategy early in Phase 2 rather
-  than letting it become an afterthought.
-- **`feature/repo-skeleton` (this repo's current branch) has never been pushed or PR'd to `main`.**
-  All work so far — including this session's FMP/GUS additions — lives only on this local branch.
-  Decide when/whether to open that PR.
-- **`README_PL.md`, referenced by `CLAUDE.md`, doesn't exist** (only a one-line `README.md` stub
-  and the full `README_EN.md`). Either write it or update `CLAUDE.md`'s reference — noted here
-  since it's the kind of small inconsistency that's easy to forget once you're heads-down in a
-  specific source's implementation.
+- **Phase 4 (Automation) is the natural next phase** per `README_EN.md`'s roadmap — scheduling and
+  monitoring the now-complete Bronze→Silver→Gold pipeline via Data Factory. `pipelines/` is
+  currently just a placeholder `README.md`.
+- **Phase 5 (Streaming path)** — Finnhub WS Bridge → Eventstream → Eventhouse → Activator — is
+  fully unstarted (`notebooks/streaming/` is a placeholder `README.md` only). No Finnhub API key
+  has been used in this project yet either.
+- **Phase 6 (Data quality)**: the source log (`docs/source-log.md`) and transform test coverage
+  now exist; what's still open is the cross-layer consistency checks `README_EN.md`'s "Data
+  Quality" section describes (row counts, date ranges between layers) — nothing implements those
+  yet, only the Silver-level dedup/standardize logic.
