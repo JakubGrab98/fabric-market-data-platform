@@ -21,7 +21,7 @@ not convert values. See
   becomes visible as a currency mismatch immediately (a `PLN`-only
   aggregate accidentally including a `USD` row would be obviously wrong),
   rather than silently blending into PLN-denominated numbers.
-- `fact_ceny` in Gold inherits this — no converted-currency column today.
+- `fact_prices` in Gold inherits this — no converted-currency column today.
   `docs/data-model.md` documents where a future converted column (e.g.
   `close_pln`) would land: an addition, not a replacement of `currency`/
   `close`.

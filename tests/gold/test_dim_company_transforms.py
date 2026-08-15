@@ -1,4 +1,4 @@
-from notebooks.gold.dim_spolka.transforms import build_dim_spolka, load_ticker_config
+from notebooks.gold.dim_company.transforms import build_dim_company, load_ticker_config
 
 
 def test_load_ticker_config(tmp_path):
@@ -26,7 +26,7 @@ def test_load_ticker_config(tmp_path):
     ]
 
 
-def test_build_dim_spolka_maps_config_to_columns(spark):
+def test_build_dim_company_maps_config_to_columns(spark):
     tickers = [
         {
             "ticker": "PKN",
@@ -44,7 +44,7 @@ def test_build_dim_spolka_maps_config_to_columns(spark):
         },
     ]
 
-    dim_df = build_dim_spolka(tickers, spark)
+    dim_df = build_dim_company(tickers, spark)
     rows = {r.ticker: r for r in dim_df.collect()}
 
     assert set(dim_df.columns) == {"ticker", "company_name", "listing_currency", "fmp_symbol"}

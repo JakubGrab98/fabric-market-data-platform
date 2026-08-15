@@ -65,16 +65,14 @@ Every source is documented in a source log (retrieval date, API version, licensi
 
 Star schema oriented toward industry peer comparisons. Full column/key/grain
 reference: [`docs/data-model.md`](./docs/data-model.md) — that's the source
-of truth; physical Gold table names are Polish (`dim_spolka`, `dim_data`,
-`fact_ceny`, `fact_fundamenty`, `fact_makro`), matching
-[`architecture.mermaid`](./architecture.mermaid). English names below are
-glosses for readability in this document:
+of truth; physical Gold table names match
+[`architecture.mermaid`](./architecture.mermaid):
 
-- `dim_company` (`dim_spolka`) — ticker, name, listing currency
-- `dim_date` (`dim_data`) — calendar (day, week, month, quarter, year, GPW trading day flag)
-- `fact_prices` (`fact_ceny`) — daily OHLCV per company
-- `fact_fundamentals` (`fact_fundamenty`) — quarterly/annual fundamental metrics per company (long/EAV format)
-- `fact_macro` (`fact_makro`) — macroeconomic indicators per country/period (long/EAV format)
+- `dim_company` — ticker, name, listing currency
+- `dim_date` — calendar (day, week, month, quarter, year, GPW trading day flag)
+- `fact_prices` — daily OHLCV per company
+- `fact_fundamentals` — quarterly/annual fundamental metrics per company (long/EAV format)
+- `fact_macro` — macroeconomic indicators per country/period (long/EAV format)
 
 ## Data Quality
 
@@ -87,7 +85,7 @@ glosses for readability in this document:
 
 - [x] Phase 1 — Batch ingestion: notebooks pulling fundamentals/macro/FX into Bronze (NBP, Stooq, FMP, GUS BDL done; Eurostat deliberately deferred — see `docs/next-steps.md`)
 - [x] Phase 2 — Transformation: cleaning and standardization in Silver (all four sources: fx_rates, prices, fundamentals, macro)
-- [x] Phase 3 — Modeling: star schema in Gold (`dim_spolka`, `dim_data`, `fact_ceny`, `fact_fundamenty`, `fact_makro`); first Power BI report still open
+- [x] Phase 3 — Modeling: star schema in Gold (`dim_company`, `dim_date`, `fact_prices`, `fact_fundamentals`, `fact_macro`); first Power BI report still open
 - [ ] Phase 4 — Automation: scheduling and monitoring in Data Factory
 - [ ] Phase 5 — Streaming path: WS Bridge (Finnhub) → Eventstream → Eventhouse → Activator (alerts)
 - [ ] Phase 6 — Data quality: tests, documentation, source log (transform test coverage and the source log already exist; remaining items open)

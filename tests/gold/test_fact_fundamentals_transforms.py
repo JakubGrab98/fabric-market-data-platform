@@ -2,13 +2,13 @@ from datetime import date, datetime
 
 from pyspark.sql import Row
 
-from notebooks.gold.fact_fundamenty.transforms import (
-    FACT_FUNDAMENTY_COLUMNS,
-    build_fact_fundamenty,
+from notebooks.gold.fact_fundamentals.transforms import (
+    FACT_FUNDAMENTALS_COLUMNS,
+    build_fact_fundamentals,
 )
 
 
-def test_build_fact_fundamenty_selects_canonical_columns(spark):
+def test_build_fact_fundamentals_selects_canonical_columns(spark):
     rows = [
         Row(
             ticker="PKN",
@@ -25,9 +25,9 @@ def test_build_fact_fundamenty_selects_canonical_columns(spark):
     ]
     silver_df = spark.createDataFrame(rows)
 
-    fact_df = build_fact_fundamenty(silver_df)
+    fact_df = build_fact_fundamentals(silver_df)
 
-    assert fact_df.columns == FACT_FUNDAMENTY_COLUMNS
+    assert fact_df.columns == FACT_FUNDAMENTALS_COLUMNS
     row = fact_df.collect()[0]
     assert row.metric_name == "total_assets"
     assert row.metric_value == 100.5

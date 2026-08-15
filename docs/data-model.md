@@ -9,15 +9,14 @@ references, once one exists.
 
 ## Naming
 
-Physical table names are **Polish**, matching `architecture.mermaid` (already
-committed) and `CLAUDE.md`'s "Table naming" convention: `dim_spolka`,
-`dim_data`, `fact_ceny`, `fact_fundamenty`, `fact_makro`. `README_EN.md` uses
-English glosses (`dim_company`, `fact_prices`, ...) for the same tables in
-prose — that's a documentation-language choice, not a second physical naming
-scheme. `CLAUDE.md` defers to `README_PL.md` for naming, which doesn't exist
-yet (tracked in `docs/next-steps.md`); this doc follows `architecture.mermaid`
-as the tie-breaker since it's the one already-committed source using these
-names concretely.
+Physical table names are **English**: `dim_company`, `dim_date`,
+`fact_prices`, `fact_fundamentals`, `fact_macro`, matching
+`architecture.mermaid` and `CLAUDE.md`'s "Table naming" convention. This
+project briefly used Polish names for the same tables (`dim_spolka`,
+`dim_data`, `fact_ceny`, `fact_fundamenty`, `fact_makro`) — see ADR 0001
+(`docs/adr/0001-polish-gold-table-names.md`) for that original decision and
+ADR 0006 (`docs/adr/0006-english-gold-table-names.md`) for why it was
+reversed to keep the codebase in one language throughout.
 
 All columns `snake_case` per `CLAUDE.md`.
 
@@ -32,7 +31,7 @@ need for — no dimension attribute here is expected to change in a way that
 needs history tracked. Revisit only if a real slowly-changing-dimension
 requirement shows up (e.g. a ticker's listing currency actually changes).
 
-## dim_spolka
+## dim_company
 
 **Grain**: one row per ticker.
 
@@ -48,7 +47,7 @@ to a retrieval run).
 | `listing_currency` | string | From config `currency`. |
 | `fmp_symbol` | string, nullable | From config `fmp_symbol`. **Unverified** — see `notebooks/config/tickers.yaml` header comment and `docs/next-steps.md`; carried through so a future consumer can see which FMP symbol a fundamentals row actually resolved from. |
 
-## dim_data
+## dim_date
 
 **Grain**: one row per calendar date.
 
@@ -67,9 +66,9 @@ hardcoded literal range, per `CLAUDE.md`'s "formulas over magic numbers."
 | `week_of_year` | int | |
 | `day_of_week` | int | 1-7 |
 | `day_name` | string | |
-| `is_trading_day_gpw` | boolean | `is_weekday AND NOT is_polish_public_holiday`. Compute the holiday side with a maintained library (e.g. the `holidays` PyPI package, `country="PL"`) rather than a hand-maintained date list — that's the "formula" here, not a magic number. **Known limitation**: GPW has exchange-specific closures beyond public holidays (e.g. Christmas Eve half-day) this flag won't catch; refine only if an analysis actually needs that precision. |
+| `is_trading_day_gpw` | boolean | `is_weekday AND NOT is_polish_public_holiday`. Compute the holiday side with a maintained library (e.g. the `holidays` PyPI package, `country="PL"`) rather than a hand-maintained date list — that's the "formula" here, not a magic number. **Known limitation**: GPW has exchange-specific closures beyond public holidays (e.g. Christmas Eve half-day) this flag won't catch; refine only if an analysis actually needs that precision. (`gpw` here names the real Warsaw Stock Exchange, Giełda Papierów Wartościowych — a proper noun, not a language-consistency exception.) |
 
-## fact_ceny
+## fact_prices
 
 **Grain**: one row per `(ticker, date)`.
 
@@ -78,8 +77,8 @@ shape but no new transformation; Silver is already flat at this grain.
 
 | Column | Type | Notes |
 |---|---|---|
-| `ticker` | string | FK -> `dim_spolka.ticker` |
-| `date` | date | FK -> `dim_data.date` |
+| `ticker` | string | FK -> `dim_company.ticker` |
+| `date` | date | FK -> `dim_date.date` |
 | `open` | double | |
 | `high` | double | |
 | `low` | double | |
@@ -96,7 +95,7 @@ see `docs/superpowers/specs/2026-08-10-phase2-silver-fx-prices-design.md`,
 Silver, it would surface here as an additional column (e.g. `close_pln`),
 not a replacement of `currency`/`close`.
 
-## fact_fundamenty
+## fact_fundamentals
 
 **Grain**: one row per `(ticker, period_end_date, statement_type,
 metric_name)` — a long/narrow ("EAV") fact, not one column per financial
@@ -107,11 +106,11 @@ statement type (balance sheet / income statement / cash flow) and is treated
 as dynamic all the way through Bronze (`notebooks/bronze/fmp/transforms.py`
 infers schema from the field union across records rather than a fixed
 `StructType`, precisely because the field set varies and can change between
-API revisions). A single wide `fact_fundamenty` with one column per possible
-line item would be extremely sparse and would need a Gold-schema change
-(`docs/data-model.md` + Power BI update, per `CLAUDE.md`) every time FMP
-adds or drops a field. The long format absorbs that variability without a
-schema change — new metrics just appear as new `metric_name` values.
+API revisions). A single wide `fact_fundamentals` with one column per
+possible line item would be extremely sparse and would need a Gold-schema
+change (`docs/data-model.md` + Power BI update, per `CLAUDE.md`) every time
+FMP adds or drops a field. The long format absorbs that variability without
+a schema change — new metrics just appear as new `metric_name` values.
 
 **Trade-off, stated plainly**: this is not directly a normal Power BI table
 of measures — consumption needs a pivot (matrix visual or a DAX/Power Query
@@ -121,8 +120,8 @@ not an oversight.
 
 | Column | Type | Notes |
 |---|---|---|
-| `ticker` | string | FK -> `dim_spolka.ticker` |
-| `period_end_date` | date | FK -> `dim_data.date`. The statement's reporting period end date. |
+| `ticker` | string | FK -> `dim_company.ticker` |
+| `period_end_date` | date | FK -> `dim_date.date`. The statement's reporting period end date. |
 | `statement_type` | string | `balance_sheet` \| `income_statement` \| `cash_flow` |
 | `period_type` | string | `quarter` \| `annual`. Bronze currently only fetches `quarter` (`period_limit`/`period=quarter` in `build_*_url`); column exists because FMP's API supports both. |
 | `fiscal_year` | int | From FMP's `fiscalYear`/`calendarYear` field. |
@@ -132,7 +131,7 @@ not an oversight.
 | `source` | string | Provenance carried through. |
 | `retrieved_at` | timestamp | Provenance carried through. |
 
-## fact_makro
+## fact_macro
 
 **Grain**: one row per `(country, indicator_name, year)`, represented via
 `reference_date` = December 31 of the reporting year (standard convention
@@ -143,13 +142,13 @@ Bronze/GUS is already effectively long-format
 `indicator_name`, `variable_id`, `year`, `value`, `unit`, `source`,
 `retrieved_at`) — Gold continues that shape rather than pivoting to one
 column per indicator, for the same schema-stability reason as
-`fact_fundamenty`: new indicators (e.g. a future GDP-per-capita or CPI
+`fact_fundamentals`: new indicators (e.g. a future GDP-per-capita or CPI
 sub-index) shouldn't require a Gold-schema change.
 
 | Column | Type | Notes |
 |---|---|---|
 | `country` | string | Currently always `"PL"` — GUS BDL is Poland-only; Eurostat (other countries) was explicitly scoped out of Phase 1 (`docs/next-steps.md`). Included now so the grain is unambiguous and adding a second country later is a new row shape, not a schema change. |
-| `reference_date` | date | FK -> `dim_data.date`. December 31 of `year`. |
+| `reference_date` | date | FK -> `dim_date.date`. December 31 of `year`. |
 | `indicator_name` | string | `cpi` \| `unemployment_rate` \| `gdp` — matches `notebooks/config/macro_indicators.yaml` `name`. |
 | `value` | double | |
 | `unit` | string | `-` (index) / `%` / `mln zł` depending on indicator — carried through, not normalized to one unit, since the three indicators aren't comparable on a common scale anyway. |
@@ -158,12 +157,6 @@ sub-index) shouldn't require a Gold-schema change.
 
 ## Open dependencies
 
-- `fact_fundamenty` and `fact_makro` assume Silver modules for FMP and GUS
-  that don't exist yet (tracked as the next implementation step after this
-  doc). Their Silver output is being designed to match this Gold contract
-  directly — long format with `metric_name`/`metric_value` for fundamentals,
-  a pass-through of the Bronze macro shape for macro — so no schema rework
-  should be needed once that Silver work lands.
 - `is_trading_day_gpw`'s holiday-library choice is a recommendation, not yet
-  implemented — first real decision point when `notebooks/gold/dim_data` is
-  built.
+  implemented — first real decision point when `notebooks/gold/dim_date` is
+  revisited.

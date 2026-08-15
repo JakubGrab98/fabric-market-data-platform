@@ -1,4 +1,4 @@
-"""Transform functions for the Gold dim_spolka build notebook."""
+"""Transform functions for the Gold dim_company build notebook."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pyspark.sql import DataFrame, SparkSession
 
 
 def load_ticker_config(path: str | Path) -> list[dict]:
-    """Load the ticker list used to build dim_spolka.
+    """Load the ticker list used to build dim_company.
 
     Args:
         path: Path to a YAML file shaped like notebooks/config/tickers.yaml.
@@ -21,10 +21,10 @@ def load_ticker_config(path: str | Path) -> list[dict]:
     return config["tickers"]
 
 
-def build_dim_spolka(tickers: list[dict], spark: SparkSession) -> DataFrame:
-    """Build dim_spolka directly from ticker config.
+def build_dim_company(tickers: list[dict], spark: SparkSession) -> DataFrame:
+    """Build dim_company directly from ticker config.
 
-    dim_spolka is static reference data, not something ingested through
+    dim_company is static reference data, not something ingested through
     Bronze/Silver — see docs/data-model.md — so this reads notebooks/config/
     tickers.yaml directly rather than a Silver table.
 

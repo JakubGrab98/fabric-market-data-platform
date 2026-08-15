@@ -217,8 +217,9 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 .mcp.json
-architecture.mermaid
-CLAUDE.md
 
 # Local git worktrees (subagent-driven-development scratch workspaces)
 .worktrees/
+.claude/
+.stubs/
+.vscode/

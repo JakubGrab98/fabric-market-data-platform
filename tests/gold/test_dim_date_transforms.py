@@ -1,6 +1,6 @@
 from datetime import date
 
-from notebooks.gold.dim_data.transforms import generate_date_dimension
+from notebooks.gold.dim_date.transforms import generate_date_dimension
 
 
 def test_generate_date_dimension_covers_full_range(spark):

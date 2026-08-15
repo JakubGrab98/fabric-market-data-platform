@@ -22,7 +22,7 @@ rather than leaving it stale.
 
 ## Phase 3 follow-ups (deliberately deferred, not blocking)
 
-- **`dim_data.is_trading_day_gpw` is a weekday-only approximation** (Mon-Fri via Spark's
+- **`dim_date.is_trading_day_gpw` is a weekday-only approximation** (Mon-Fri via Spark's
   `dayofweek()`) — it does not exclude Polish public holidays yet. `docs/data-model.md` and
   `docs/superpowers/specs/2026-08-15-phase3-gold-star-schema-design.md` both recommend a
   maintained holiday library (e.g. the `holidays` PyPI package, `country="PL"`) for the real

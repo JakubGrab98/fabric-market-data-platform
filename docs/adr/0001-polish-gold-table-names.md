@@ -1,7 +1,9 @@
 # ADR 0001: Gold physical table names are Polish
 
 ## Status
-Accepted
+Superseded by [ADR 0006](0006-english-gold-table-names.md) — physical table
+names are now English throughout. Kept below unmodified as the historical
+record of why Polish names were chosen in the first place.
 
 ## Context
 `architecture.mermaid` (committed early, describing the target architecture)
