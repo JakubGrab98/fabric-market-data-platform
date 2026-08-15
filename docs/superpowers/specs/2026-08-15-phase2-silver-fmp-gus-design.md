@@ -8,8 +8,8 @@ Silver as "a separate, later round" because the dedup pattern might not
 transfer cleanly. It doesn't transfer cleanly — this spec is that round.
 
 `docs/data-model.md` (written just before this spec) already commits to the
-Gold contract these two Silver modules need to produce: `fact_fundamenty`
-and `fact_makro` are both long/EAV-format facts (`metric_name`/
+Gold contract these two Silver modules need to produce: `fact_fundamentals`
+and `fact_macro` are both long/EAV-format facts (`metric_name`/
 `metric_value` rows, not one column per line item), chosen specifically
 because FMP's field set is statement-type-dependent and dynamically
 inferred in Bronze, and GUS's Bronze shape is already long. Silver's job
@@ -81,7 +81,7 @@ Much closer to the fx_rates/prices mechanism — Bronze is already one row per
    see `docs/data-model.md` for why this column exists now even with only
    one value today) and derive `reference_date` = December 31 of `year`
    (`to_date` on a constructed `"{year}-12-31"` string), matching
-   `fact_makro`'s grain decision in `docs/data-model.md`.
+   `fact_macro`'s grain decision in `docs/data-model.md`.
 3. **Provenance and idempotent upsert**: `source`/`retrieved_at`/
    `variable_id` carried through (kept for lineage even though Gold doesn't
    project it); `MERGE INTO` on `(indicator_name, year)`.

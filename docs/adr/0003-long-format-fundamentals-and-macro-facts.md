@@ -1,4 +1,4 @@
-# ADR 0003: Long/EAV format for fact_fundamenty and fact_macro
+# ADR 0003: Long/EAV format for fact_fundamentals and fact_macro
 
 ## Status
 Accepted
@@ -13,14 +13,14 @@ API revisions. GUS BDL's Bronze shape
 (`notebooks/bronze/gus/transforms.py`) is already one row per
 `(indicator_name, year)` — effectively long-format from the source.
 
-A wide `fact_fundamenty` (one column per financial line item) or a wide
+A wide `fact_fundamentals` (one column per financial line item) or a wide
 `fact_macro` (one column per macro indicator) would need a Gold-schema
 change — table/column update in `docs/data-model.md` plus the Power BI
 semantic model, per `CLAUDE.md`'s boundary rule — every time FMP adds a
 field or a new macro indicator is configured.
 
 ## Decision
-`fact_fundamenty` and `fact_macro` are both long/EAV-format facts:
+`fact_fundamentals` and `fact_macro` are both long/EAV-format facts:
 `metric_name`/`metric_value` rows rather than one column per line item or
 indicator. See `docs/data-model.md` for the exact column list and grain of
 each.

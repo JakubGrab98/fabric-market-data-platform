@@ -1,0 +1,76 @@
+flowchart TD
+    subgraph BatchSources["Batch sources"]
+        FMP["Financial Modeling Prep API<br/>fundamentals, financial statements"]
+        NBP["NBP API<br/>FX rates"]
+        GUS["GUS / Eurostat<br/>PL/EU macro data"]
+        STOOQ["Stooq<br/>historical prices, incl. GPW"]
+    end
+
+    subgraph StreamSource["Event-driven source"]
+        FH["Finnhub WebSocket<br/>real-time trades (push, up to 50 tickers)"]
+    end
+
+    subgraph BatchIngestion["Batch ingestion"]
+        NB1["Fabric Notebook (PySpark/Python)<br/>API data retrieval"]
+    end
+
+    subgraph StreamIngestion["Real-Time Intelligence"]
+        BRIDGE["WS Bridge (Notebook / lightweight process)<br/>Finnhub WebSocket client → publishes events"]
+        ES["Eventstream<br/>custom endpoint, SQL operator"]
+        EH["Eventhouse (KQL DB)<br/>fresh quotes, KQL queries"]
+        ACT["Activator<br/>threshold alerts (e.g. price drop of X%)"]
+    end
+
+    subgraph Bronze["Bronze — OneLake Lakehouse"]
+        B1["Raw batch data (Delta)<br/>1:1 with source, append-only"]
+        B2["Raw price events (Delta)<br/>from Eventstream → Lakehouse"]
+    end
+
+    subgraph Silver["Silver — OneLake Lakehouse"]
+        S1["Cleaning, deduplication,<br/>currency and date standardization"]
+    end
+
+    subgraph Gold["Gold — star schema"]
+        G1["dim_company"]
+        G2["dim_date"]
+        G3["fact_prices"]
+        G4["fact_fundamentals"]
+        G5["fact_macro"]
+    end
+
+    subgraph Serving["Serving layer"]
+        PBI["Power BI<br/>(Direct Lake) — historical analysis"]
+        RTD["Real-Time Dashboard<br/>(Eventhouse) — current quotes"]
+    end
+
+    subgraph Orchestration["Orchestration"]
+        DF["Data Factory Pipeline<br/>scheduling, monitoring, retry (batch)"]
+    end
+
+    FMP --> NB1
+    NBP --> NB1
+    GUS --> NB1
+    STOOQ --> NB1
+    NB1 --> B1
+    B1 --> S1
+
+    FH --> BRIDGE
+    BRIDGE --> ES
+    ES --> EH
+    ES --> B2
+    EH --> ACT
+    EH --> RTD
+    B2 --> S1
+
+    S1 --> G1
+    S1 --> G2
+    S1 --> G3
+    S1 --> G4
+    S1 --> G5
+    G1 --> PBI
+    G2 --> PBI
+    G3 --> PBI
+    G4 --> PBI
+    G5 --> PBI
+    DF -.orchestrates.-> NB1
+    DF -.orchestrates.-> S1

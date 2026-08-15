@@ -8,7 +8,7 @@ Small pieces of logic are copied across multiple `transforms.py` modules
 rather than shared:
 - `load_ticker_config`/`load_*_config` (a three-line YAML read) is
   duplicated in `notebooks/bronze/{stooq,fmp}`, `notebooks/silver/prices`,
-  and `notebooks/gold/dim_spolka`.
+  and `notebooks/gold/dim_company`.
 - The dedup-by-natural-key window-function pattern is near-identical across
   `notebooks/silver/{fx_rates,prices,fundamentals,macro}`.
 - The UTC-normalization line
