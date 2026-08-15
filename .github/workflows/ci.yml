@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # pyproject.toml has no [build-system] table (this repo isn't a
+      # distributable package — it's Fabric notebooks + tests), so
+      # dependencies are installed directly rather than via `pip install .`.
+      # Keep this list in sync with pyproject.toml's [project.dependencies]
+      # and [project.optional-dependencies.dev].
+      - name: Install dependencies
+        run: pip install requests pyyaml "pyspark~=3.5" pytest ruff black
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Format check (black)
+        run: black --check .
+
+      - name: Test (pytest)
+        run: pytest tests/ -v
