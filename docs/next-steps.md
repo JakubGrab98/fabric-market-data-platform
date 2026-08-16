@@ -54,8 +54,10 @@ rather than leaving it stale.
 - **Stooq's CSV header assumption is still unverified live** (`docs/source-log.md` — blocked by
   Stooq's anti-bot JS challenge in every dev environment tried so far). Confirm from an actual
   Fabric run, which may have a different network path.
-- **No CI** (`.github/workflows` or equivalent) runs `pytest`/`ruff`/`black` automatically —
-  currently a manual step before every PR.
+- **Referential-integrity checks aren't built** (e.g. every `fact_prices.ticker` exists in
+  `dim_company`) — a different kind of check than the row-count/date-range reconciliation in
+  `notebooks/quality/reconciliation/`, deliberately out of scope there
+  (`docs/superpowers/specs/2026-08-16-phase6-data-quality-reconciliation-design.md`).
 
 ## Bigger picture
 
@@ -65,7 +67,8 @@ rather than leaving it stale.
 - **Phase 5 (Streaming path)** — Finnhub WS Bridge → Eventstream → Eventhouse → Activator — is
   fully unstarted (`notebooks/streaming/` is a placeholder `README.md` only). No Finnhub API key
   has been used in this project yet either.
-- **Phase 6 (Data quality)**: the source log (`docs/source-log.md`) and transform test coverage
-  now exist; what's still open is the cross-layer consistency checks `README_EN.md`'s "Data
-  Quality" section describes (row counts, date ranges between layers) — nothing implements those
-  yet, only the Silver-level dedup/standardize logic.
+- **Phase 6 (Data quality)**: the source log (`docs/source-log.md`), transform test coverage, and
+  now cross-layer row-count/date-range reconciliation (`notebooks/quality/reconciliation/`) all
+  exist. Still open: schema-drift/null-rate checks and referential-integrity checks (both
+  deliberately out of scope for the reconciliation notebook — see above), and running any of this
+  against a real Fabric workspace for the first time.
