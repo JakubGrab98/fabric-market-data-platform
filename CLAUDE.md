@@ -32,6 +32,7 @@ Don't duplicate that content here — read it when you need the "why."
   /bronze          ingestion notebooks, one per source (batch)
   /silver          cleaning / standardization transforms
   /gold            star-schema build notebooks
+  /quality         cross-layer data quality / reconciliation checks
   /streaming       Finnhub WS bridge, Eventstream/Eventhouse setup
 /pipelines         exported Data Factory pipeline definitions (JSON)
 /docs              data model, source log, ADRs

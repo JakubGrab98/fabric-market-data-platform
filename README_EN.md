@@ -78,7 +78,8 @@ of truth; physical Gold table names match
 
 - Schema validation on entry into the Bronze layer (types, value ranges)
 - Deduplication and date-reconciliation rules in the Silver layer
-- Cross-layer consistency checks (row counts, date ranges) before publishing to Gold
+- Cross-layer consistency checks (row counts, date ranges) between Bronze/Silver/Gold —
+  `notebooks/quality/reconciliation/`
 - Source and retrieval-timestamp log for full reproducibility
 
 ## Status & Roadmap
@@ -88,7 +89,7 @@ of truth; physical Gold table names match
 - [x] Phase 3 — Modeling: star schema in Gold (`dim_company`, `dim_date`, `fact_prices`, `fact_fundamentals`, `fact_macro`); first Power BI report still open
 - [ ] Phase 4 — Automation: scheduling and monitoring in Data Factory
 - [ ] Phase 5 — Streaming path: WS Bridge (Finnhub) → Eventstream → Eventhouse → Activator (alerts)
-- [ ] Phase 6 — Data quality: tests, documentation, source log (transform test coverage and the source log already exist; remaining items open)
+- [ ] Phase 6 — Data quality: tests, documentation, source log, cross-layer reconciliation (all now exist; schema-drift/null-rate and referential-integrity checks still open — see `docs/next-steps.md`)
 
 ## Setup / Getting Started
 
