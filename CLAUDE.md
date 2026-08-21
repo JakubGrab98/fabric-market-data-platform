@@ -37,8 +37,23 @@ Don't duplicate that content here — read it when you need the "why."
 /pipelines         exported Data Factory pipeline definitions (JSON)
 /docs              data model, source log, ADRs
 /tests             unit tests for transform logic (local PySpark)
+/scripts           repo tooling (e.g. Fabric Git-sync mirror generator)
+/fabric            generated -- do not edit; see fabric/README.md
 architecture.mermaid
 README_EN.md
+```
+
+## Fabric Git integration
+
+The Fabric workspace's Git connection is pointed at `/fabric`, not the repo
+root — Fabric's Git sync requires each item as a `<DisplayName>.Notebook/`
+folder with a `.platform` descriptor, which `notebooks/**` deliberately
+doesn't have (keeps it plainly testable/importable outside Fabric). After
+changing any `notebook.py`/`transforms.py`, regenerate before it'll show up
+in Fabric:
+
+```
+python scripts/build_fabric_sync.py
 ```
 
 If a task touches a directory not listed here, ask before assuming its
