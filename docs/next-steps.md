@@ -36,13 +36,14 @@ rather than leaving it stale.
 
 ## Standing, cross-phase follow-ups
 
-- **Fabric cross-folder notebook import behavior is still unconfirmed.** Every `notebook.py` uses
-  a flat `from transforms import ...` (sibling-local import); whether a *shared* module (e.g.
-  `notebooks/silver/common.py`) would resolve the same way inside Fabric's actual runtime has
-  never been tested. This blocks extracting the now five-way-duplicated `load_*_config` helpers
-  and the near-identical Silver dedup-by-natural-key pattern. See ADR 0005
-  (`docs/adr/0005-deliberate-duplication-pending-fabric-import-spike.md`) — spike this before
-  adding a sixth copy of either pattern.
+- **Fabric cross-folder notebook import question is now resolved, not just unconfirmed** — see
+  ADR 0005 (`docs/adr/0005-deliberate-duplication-pending-fabric-import-spike.md`), updated after
+  confirming via Microsoft's own docs that each notebook's `Resources/builtin/` folder (which is
+  what makes `from transforms import ...` work — see `scripts/build_fabric_sync.py` and the
+  "Fabric Git integration" section of `CLAUDE.md`) is item-scoped, not shared. A genuinely shared
+  `notebooks/silver/common.py` isn't reachable this way at all; it would need a Fabric custom
+  Environment library instead, a different and heavier mechanism. The duplication stays
+  deliberate — this isn't a "spike it later" item anymore, it's a settled answer.
 - **GUS BDL rate limiting isn't handled.** Fine today (3 indicators × ~10 years ≈ 3-4 dozen
   requests/run, anonymous limit is 100/15min), but `start_year` is a run parameter — widening it
   significantly could approach the limit. No backoff/retry logic exists in `fetch_gus_data`.
@@ -72,3 +73,8 @@ rather than leaving it stale.
   exist. Still open: schema-drift/null-rate checks and referential-integrity checks (both
   deliberately out of scope for the reconciliation notebook — see above), and running any of this
   against a real Fabric workspace for the first time.
+- **`/fabric` (Fabric Git-sync mirror) is regenerated manually today** — `python
+  scripts/build_fabric_sync.py` has to be run and committed after any `notebook.py`/
+  `transforms.py` change, or Fabric's next Git sync won't pick it up. Worth wiring into CI (fail
+  the build if `/fabric` is stale relative to `notebooks/**`) once this pattern proves out;
+  not built now to avoid coupling CI to a mechanism that's only just been validated.

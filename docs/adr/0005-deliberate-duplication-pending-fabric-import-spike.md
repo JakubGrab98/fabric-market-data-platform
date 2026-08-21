@@ -1,7 +1,10 @@
 # ADR 0005: Deliberate duplication across Bronze/Silver/Gold modules
 
 ## Status
-Accepted (temporary — expected to be revisited)
+Accepted — confirmed permanent, not pending. Originally accepted as
+temporary pending a Fabric import spike; that spike happened while wiring
+up `scripts/build_fabric_sync.py` and the answer is negative (see below).
+Keeping the original filename/number so the history stays intact.
 
 ## Context
 Small pieces of logic are copied across multiple `transforms.py` modules
@@ -16,28 +19,35 @@ rather than shared:
   duplicated across every Bronze source.
 
 Every Fabric notebook (`notebook.py`) imports its sibling `transforms.py`
-with a flat, non-package-relative `from transforms import ...` — Fabric
-injects each notebook's own folder onto the path, not the repo root. It is
-**not confirmed** whether Fabric's notebook runtime can resolve an import
-of a *different* notebook folder's module (a genuine
-`notebooks/silver/common.py` shared by `notebooks/silver/prices/notebook.py`
-and `notebooks/silver/fundamentals/notebook.py`, for example) the same way
-it resolves the sibling-local import.
+with a flat, non-package-relative `from transforms import ...`. This
+originally read as an open question ("does Fabric resolve a *shared*
+module the same way it resolves the sibling-local one?"). It's now
+answered: per Microsoft's own docs (Notebook source control & deployment),
+a notebook's importable Python files live in its own `Resources/builtin/`
+folder — see `scripts/build_fabric_sync.py`, which generates exactly this
+structure per item under `/fabric`. That folder is **item-scoped**. There
+is no mechanism for one notebook's resources to be imported by a different
+notebook; `from transforms import ...` works because each item gets its
+own private copy of `transforms.py` in its own resources folder, not
+because Fabric resolves cross-folder imports generally.
 
 ## Decision
-Keep the duplication until that Fabric import behavior is spiked and
-confirmed, rather than extracting a shared module speculatively and
-discovering at deploy time that it doesn't resolve.
+Keep the duplication — permanently, not pending further investigation. A
+genuinely shared `notebooks/silver/common.py` isn't reachable via the
+per-notebook Resources mechanism at all; the only way to share code across
+notebooks in Fabric is a custom Environment library (a heavier, different
+mechanism: a separate item type, attached to notebooks via environment
+binding, with its own deployment/versioning story). Not worth adopting for
+a handful of three-line helpers.
 
 ## Consequences
-- Each new Bronze/Silver/Gold module currently means one more copy of these
-  small helpers. Low risk today (the copies are small and mechanical), but
-  worth resolving before a sixth or seventh copy accumulates.
+- Each new Bronze/Silver/Gold module means one more copy of these small
+  helpers, by design now, not as a stopgap.
 - The one exception already made: `tests/conftest.py`'s shared `spark`
   fixture *was* extracted, because it's test-only code that never runs
-  inside the Fabric notebook runtime — the import-resolution question this
+  inside the Fabric notebook runtime — the Resources-folder scoping this
   ADR is about doesn't apply to it.
-- Next step (tracked in `docs/next-steps.md`): spike whether
-  `notebooks/<layer>/common.py` imports resolve inside an actual Fabric
-  notebook run. Once confirmed either way, either extract the shared
-  helpers or close this ADR as "duplication is the permanent answer here."
+- If the duplication cost ever genuinely outgrows this (many more sources,
+  or logic complex enough that copies drift out of sync), the fix is a
+  Fabric custom Environment library, not a shared `transforms.py` — a
+  bigger, separate decision to make when/if it's actually needed.
