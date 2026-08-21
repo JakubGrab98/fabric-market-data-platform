@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Generates a Fabric Git-sync-native mirror of notebooks/** under /fabric.
 
 Fabric's Git integration requires each item as a `<DisplayName>.Notebook/`
