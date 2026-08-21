@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "gold_fact_macro"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "39c2d706-9a20-5813-a5dd-e7ecba611fb0"
+  }
+}
