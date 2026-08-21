@@ -7,3 +7,7 @@ Regenerate after any `notebook.py`/`transforms.py` change:
 ```
 python scripts/build_fabric_sync.py
 ```
+
+## Resource support must be enabled per notebook, in the portal
+
+Fabric only includes a notebook's `Resources/builtin/` folder in its own **Commit to Git** action if "Resource support" is turned on for that notebook, in Notebook settings -> Git settings in the portal -- a per-notebook, portal-only toggle with no REST API equivalent found so far. Until it's enabled for every notebook here, clicking Commit to Git in the workspace will silently strip every `transforms.py` back out of this repo (this happened once already -- see git history around 2026-08-21 for the recovery). Enable it for each notebook before the next Commit to Git.

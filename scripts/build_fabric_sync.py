@@ -74,7 +74,10 @@ def main() -> None:
         if not notebook_py.exists():
             raise FileNotFoundError(notebook_py)
 
-        item_dir = FABRIC_SYNC_ROOT / f"{display_name}.Notebook"
+        # A plain subdirectory becomes a Fabric workspace folder on sync (no .platform
+        # marker needed for folders themselves, only for items) -- nest by layer so the
+        # workspace mirrors notebooks/<layer>/ instead of landing everything flat.
+        item_dir = FABRIC_SYNC_ROOT / layer / f"{display_name}.Notebook"
         item_dir.mkdir(parents=True)
 
         (item_dir / "notebook-content.py").write_bytes(notebook_py.read_bytes())
@@ -96,7 +99,17 @@ def main() -> None:
         "which `notebooks/**` deliberately doesn't have, to keep it plainly "
         "testable/importable outside Fabric.\n\n"
         "Regenerate after any `notebook.py`/`transforms.py` change:\n\n"
-        "```\npython scripts/build_fabric_sync.py\n```\n",
+        "```\npython scripts/build_fabric_sync.py\n```\n\n"
+        "## Resource support must be enabled per notebook, in the portal\n\n"
+        "Fabric only includes a notebook's `Resources/builtin/` folder in its own "
+        '**Commit to Git** action if "Resource support" is turned on for that '
+        "notebook, in Notebook settings -> Git settings in the portal -- a "
+        "per-notebook, portal-only toggle with no REST API equivalent found so far. "
+        "Until it's enabled for every notebook here, clicking Commit to Git in the "
+        "workspace will silently strip every `transforms.py` back out of this repo "
+        "(this happened once already -- see git history around "
+        "2026-08-21 for the recovery). Enable it for each notebook before the next "
+        "Commit to Git.\n",
         encoding="utf-8",
     )
 
