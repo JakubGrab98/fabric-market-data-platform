@@ -21,6 +21,13 @@
 #
 # Logic lives in `transforms.py` next to this notebook; this cell stays thin.
 
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
 # CELL ********************
 
 from datetime import date, datetime, timezone
